@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Configurações — Clínica</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">CLÍNICA</div>
+        <div class="brand-sub">Gestão médica</div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item">Dashboard</button>
+        <button class="nav-item">Pacientes</button>
+        <button class="nav-item">Atendimentos</button>
+        <button class="nav-item">Médicos</button>
+        <button class="nav-item">Especialidades</button>
+        <button class="nav-item">Vacinas</button>
+        <button class="nav-item">Relatórios</button>
+        <button class="nav-item active">Configurações</button>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Usuário: Administração</small>
+        <button class="btn-logout">Sair</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <h2>Configurações</h2>
+        <button class="btn btn-primary">Salvar Alterações</button>
+      </header>
+
+      <section class="content">
+        <!-- Configurações da clínica -->
+        <div class="card">
+          <h3>Informações da Clínica</h3>
+          <form class="form">
+            <div class="form-grid">
+              <label>
+                Nome da clínica *
+                <input type="text" value="Clínica Saúde & Vida" required>
+              </label>
+              <label>
+                Telefone
+                <input type="text" value="(11) 3333-4444">
+              </label>
+              <label>
+                E-mail
+                <input type="email" value="contato@clinica.com.br">
+              </label>
+              <label>
+                Endereço
+                <input type="text" value="Rua Central, 123 - São Paulo/SP">
+              </label>
+            </div>
+          </form>
+        </div>
+
+        <!-- Configurações de usuários -->
+        <div class="card">
+          <h3>Usuários e Permissões</h3>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Login</th>
+                  <th>Perfil</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Ana Souza</td>
+                  <td>ana.souza</td>
+                  <td>Recepção</td>
+                  <td class="actions">
+                    <button class="btn-action edit">✏️ Editar</button>
+                    <button class="btn-action remove">🗑️ Remover</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Dr. Pedro</td>
+                  <td>pedro.cardiologia</td>
+                  <td>Médico</td>
+                  <td class="actions">
+                    <button class="btn-action edit">✏️ Editar</button>
+                    <button class="btn-action remove">🗑️ Remover</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary">+ Novo Usuário</button>
+          </div>
+        </div>
+
+        <!-- Configurações do sistema -->
+        <div class="card">
+          <h3>Preferências do Sistema</h3>
+          <form class="form">
+            <div class="form-grid">
+              <label>
+                Tema
+                <select>
+                  <option>Claro (padrão)</option>
+                  <option>Escuro</option>
+                </select>
+              </label>
+              <label>
+                Notificações por e-mail
+                <select>
+                  <option>Ativadas</option>
+                  <option>Desativadas</option>
+                </select>
+              </label>
+              <label>
+                Backup automático
+                <select>
+                  <option>Diário</option>
+                  <option>Semanal</option>
+                  <option>Mensal</option>
+                </select>
+              </label>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Protótipo UI — Clínica Médica
+  </footer>
+</body>
+</html>

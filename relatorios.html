@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Relatórios — Clínica</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">CLÍNICA</div>
+        <div class="brand-sub">Gestão médica</div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item">Dashboard</button>
+        <button class="nav-item">Pacientes</button>
+        <button class="nav-item">Atendimentos</button>
+        <button class="nav-item">Médicos</button>
+        <button class="nav-item">Especialidades</button>
+        <button class="nav-item">Vacinas</button>
+        <button class="nav-item active">Relatórios</button>
+        <button class="nav-item">Financeiro</button>
+        <button class="nav-item">Configurações</button>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Usuário: Administração</small>
+        <button class="btn-logout">Sair</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <h2>Relatórios</h2>
+        <div class="top-actions">
+          <input type="date">
+          <input type="date">
+          <button class="btn btn-primary">Filtrar</button>
+          <button class="btn btn-sm">Exportar PDF</button>
+          <button class="btn btn-sm">Exportar CSV</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- KPIs -->
+        <div class="dashboard">
+          <div class="card kpi">
+            <h3>Consultas no mês</h3>
+            <div class="kpi-big">420</div>
+            <small>+12% vs mês passado</small>
+          </div>
+          <div class="card kpi">
+            <h3>Cancelamentos</h3>
+            <div class="kpi-big text-danger">35</div>
+            <small>Taxa: 8%</small>
+          </div>
+          <div class="card kpi">
+            <h3>Receita total</h3>
+            <div class="kpi-big">R$ 124.500</div>
+            <small>Convênios: 65%</small>
+          </div>
+          <div class="card kpi">
+            <h3>Pacientes novos</h3>
+            <div class="kpi-big text-accent">58</div>
+            <small>No período</small>
+          </div>
+        </div>
+
+        <!-- GRÁFICOS -->
+        <div class="reports-grid">
+          <div class="report-box">
+            <h4>Consultas por especialidade</h4>
+            <div class="placeholder-chart">[Gráfico de barras]</div>
+          </div>
+          <div class="report-box">
+            <h4>Atendimentos vs Cancelamentos</h4>
+            <div class="placeholder-chart">[Pizza verde/vermelho]</div>
+          </div>
+          <div class="report-box">
+            <h4>Convênio vs Particular</h4>
+            <div class="placeholder-chart">[Pizza laranja/amarelo]</div>
+          </div>
+          <div class="report-box">
+            <h4>Evolução mensal de atendimentos</h4>
+            <div class="placeholder-chart">[Gráfico de linha]</div>
+          </div>
+        </div>
+
+        <!-- TABELAS DE APOIO -->
+        <div class="grid-2">
+          <div class="card">
+            <h4>Ranking de Médicos</h4>
+            <table class="table">
+              <thead>
+                <tr><th>Médico</th><th>Consultas</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Dr. Pedro (Cardio)</td><td>88</td></tr>
+                <tr><td>Dra. Ana (Pediatria)</td><td>75</td></tr>
+                <tr><td>Dr. Lucas (Ortopedia)</td><td>64</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h4>Especialidades mais procuradas</h4>
+            <table class="table">
+              <thead>
+                <tr><th>Especialidade</th><th>Consultas</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Cardiologia</td><td>120</td></tr>
+                <tr><td>Pediatria</td><td>98</td></tr>
+                <tr><td>Ortopedia</td><td>74</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Protótipo UI — Clínica Médica
+  </footer>
+</body>
+</html>

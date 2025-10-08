@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Atendimentos — Clínica</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">CLÍNICA</div>
+        <div class="brand-sub">Gestão médica</div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item">Dashboard</button>
+        <button class="nav-item">Pacientes</button>
+        <button class="nav-item active">Atendimentos</button>
+        <button class="nav-item">Médicos</button>
+        <button class="nav-item">Especialidades</button>
+        <button class="nav-item">Vacinas</button>
+        <button class="nav-item">Relatórios</button>
+        <button class="nav-item">Financeiro</button>
+        <button class="nav-item">Configurações</button>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Usuário: Recepção</small>
+        <button class="btn-logout">Sair</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <h2>Atendimentos</h2>
+        <button class="btn btn-primary">+ Novo Atendimento</button>
+      </header>
+
+      <section class="content">
+        <!-- RESUMO -->
+        <div class="dashboard">
+          <div class="card kpi">
+            <h3>Hoje</h3>
+            <div class="kpi-big">18</div>
+            <small>Confirmados: 15 • Cancelados: 3</small>
+          </div>
+          <div class="card kpi">
+            <h3>Semana</h3>
+            <div class="kpi-big">92</div>
+            <small>Agendados até domingo</small>
+          </div>
+          <div class="card kpi">
+            <h3>Cancelados</h3>
+            <div class="kpi-big text-danger">12</div>
+            <small>No último mês</small>
+          </div>
+          <div class="card kpi">
+            <h3>Em andamento</h3>
+            <div class="kpi-big text-accent">4</div>
+            <small>Agora na clínica</small>
+          </div>
+        </div>
+
+        <!-- LISTAGEM -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Lista de Atendimentos</h3>
+            <div>
+              <button class="btn btn-sm">Exportar CSV</button>
+            </div>
+          </div>
+
+          <!-- Filtros -->
+          <div class="filters highlighted">
+            <input placeholder="Pesquisar paciente ou médico...">
+            <select>
+              <option value="">Todos status</option>
+              <option>Confirmado</option>
+              <option>Em andamento</option>
+              <option>Finalizado</option>
+              <option>Cancelado</option>
+            </select>
+            <select>
+              <option value="">Todas especialidades</option>
+              <option>Cardiologia</option>
+              <option>Pediatria</option>
+              <option>Ortopedia</option>
+            </select>
+            <button class="btn btn-sm">Filtrar</button>
+          </div>
+
+          <!-- Tabela -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Médico</th>
+                  <th>Especialidade</th>
+                  <th>Data</th>
+                  <th>Hora</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>João Silva</td>
+                  <td>Dr. Pedro</td>
+                  <td>Cardiologia</td>
+                  <td>30/09/2025</td>
+                  <td>09:00</td>
+                  <td><span class="status upcoming">Confirmado</span></td>
+                  <td class="actions">
+                    <button class="btn-action edit">✏️ Editar</button>
+                    <button class="btn-action cancel">❌ Cancelar</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Maria Souza</td>
+                  <td>Dra. Ana</td>
+                  <td>Pediatria</td>
+                  <td>30/09/2025</td>
+                  <td>09:30</td>
+                  <td><span class="status ongoing">Em andamento</span></td>
+                  <td class="actions">
+                    <button class="btn-action finish">✔️ Finalizar</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Pedro Lima</td>
+                  <td>Dr. Lucas</td>
+                  <td>Ortopedia</td>
+                  <td>29/09/2025</td>
+                  <td>11:00</td>
+                  <td><span class="status done">Finalizado</span></td>
+                  <td class="actions">
+                    <button class="btn-action edit">📄 Ver prontuário</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Carla Mendes</td>
+                  <td>Dr. Pedro</td>
+                  <td>Cardiologia</td>
+                  <td>28/09/2025</td>
+                  <td>15:00</td>
+                  <td><span class="status overdue">Cancelado</span></td>
+                  <td class="actions">
+                    <button class="btn-action edit">✏️ Reagendar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Protótipo UI — Clínica Médica
+  </footer>
+</body>
+</html>
