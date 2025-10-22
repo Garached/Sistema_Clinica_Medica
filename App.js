@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import "./styles.css";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import Medicos from "./Medicos"; 
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
