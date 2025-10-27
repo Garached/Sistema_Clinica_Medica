@@ -26,8 +26,8 @@ Siga os passos abaixo para configurar e executar o projeto em seu ambiente local
 
 1.  **Clonar o repositório:**
     ```bash
-    git clone [URL-DO-SEU-REPOSITORIO-AQUI]
-    cd [NOME-DA-PASTA-DO-PROJETO]
+    git clone https://github.com/Garached/Sistema_Clinica_Medica.git
+    cd Sistema_Clinica_Medica
     ```
 
 2.  **Instalar dependências (Front-end):**
