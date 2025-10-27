@@ -1,235 +1,219 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Modal, StyleSheet } from "react-native";
-import Medicos from "./Medicos"; 
+import React, { useState } from 'react';
 
 function App() {
-  const [activePage, setActivePage] = useState("Dashboard");
+  const [activePage, setActivePage] = useState('Dashboard');
 
-  // Dados de exemplo
-  const pacientesExemplo = [
-    { nome: "João Silva", cpf: "123.456.789-00", dataNasc: "12/05/1980", convenio: "Unimed", contato: "(11) 99999-9999" },
-    { nome: "Maria Souza", cpf: "222.333.444-55", dataNasc: "20/11/1992", convenio: "Particular", contato: "(21) 98888-7777" },
-  ];
+  const [pacientes, setPacientes] = useState([
+    { id: 1, nome: "João Silva", cpf: "123.456.789-00", dataNasc: "12/05/1980", convenio: "Unimed" },
+    { id: 2, nome: "Maria Souza", cpf: "222.333.444-55", dataNasc: "20/11/1992", convenio: "Particular" },
+  ]);
 
-  const agendamentosExemplo = [
-    { hora: "08:30", paciente: "João Silva", medico: "Dr. Pedro", especialidade: "Cardiologia", sala: "2", status: "upcoming" },
-    { hora: "09:00", paciente: "Maria Souza", medico: "Drª. Ana", especialidade: "Pediatria", sala: "1", status: "busy" },
-  ];
+  const [agendamentos, setAgendamentos] = useState([
+    { id: 1, hora: "08:30", paciente: "João Silva", medico: "Dr. Pedro", especialidade: "Cardiologia", status: "confirmado" },
+    { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
+  ]);
+  
+  const [medicos, setMedicos] = useState([
+    { id: 1, nome: "Dr. Pedro Almeida", especialidade: "Cardiologia", horario: "09:00-17:00", imagem: "https://images.unsplash.com/photo-1537368910025-7003507965b6?w=500&auto=format&fit=crop" },
+    { id: 2, nome: "Dra. Ana Souza", especialidade: "Pediatria", horario: "08:00-14:00", imagem: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop" },
+  ]);
 
-  // Função para renderizar a página clicada
+  const [especialidades, setEspecialidades] = useState([
+      { id: 1, nome: "Cardiologia", medicos: 4 },
+      { id: 2, nome: "Pediatria", medicos: 3 },
+  ]);
+
+  const [vacinas, setVacinas] = useState([ { id: 1, paciente: "João Silva", vacinas: 2 } ]);
+
+  const dadosRelatorio = {
+    consultasPorMes: [{ mes: 'Setembro', total: 250 }, { mes: 'Outubro', total: 210 }],
+    faturamentoPorConvenio: [{ convenio: 'Unimed', valor: 'R$ 42.850' }, { convenio: 'Particular', valor: 'R$ 23.100' }],
+  };
+  
+  const handleEdit = (id, tipo) => {
+    alert(`Ação: EDITAR item ${id} da categoria ${tipo}`);
+  };
+
+  const handleDelete = (id, tipo, setter) => {
+    if (window.confirm(`Tem certeza que deseja excluir o item ${id} de ${tipo}?`)) {
+      setter(prevItems => prevItems.filter(item => item.id !== id));
+    }
+  };
+
   const renderPage = () => {
-    switch(activePage) {
+    switch (activePage) {
       case "Dashboard":
         return (
-          <section className="dashboard">
-            <div className="card kpi">
-              <h3>Agendamentos hoje</h3>
-              <div className="kpi-big">27</div>
-              <small>Confirmados: 22 • Cancelados: 5</small>
-            </div>
-            <div className="card kpi">
-              <h3>Pacientes cadastrados</h3>
-              <div className="kpi-big">1.452</div>
-              <small>Novos este mês: 34</small>
-            </div>
-            <div className="card kpi">
-              <h3>Receita (mês)</h3>
-              <div className="kpi-big">R$ 68.340,00</div>
-              <small>Convênios: 64%</small>
-            </div>
-            <div className="card calendar-preview">
-              <h3>Próximas consultas</h3>
-              <ul className="mini-calendar">
-                {agendamentosExemplo.map((a,i) => (
-                  <li key={i}><strong>{a.hora}</strong> — {a.paciente} ({a.especialidade})</li>
-                ))}
-              </ul>
-              <div className="card-actions">
-                <button className="btn">Ver Agenda Completa</button>
-                <button className="btn btn-outline">Novo Agendamento</button>
-              </div>
-            </div>
+          <section style={styles.dashboardGrid}>
+            <div style={styles.card}><h3 style={styles.cardTitle}>Agendamentos hoje</h3><div style={styles.kpi}>27</div><small>Confirmados: 22 / Cancelados: 5</small></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>Pacientes</h3><div style={styles.kpi}>{pacientes.length}</div><small>Novos este mês: 3</small></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>Receita (mês)</h3><div style={styles.kpi}>R$ 68.340</div><small>Convênios: 64%</small></div>
           </section>
         );
 
       case "Pacientes":
         return (
-          <div className="card">
-            <div className="card-header">
-              <h3>Pacientes</h3>
-            </div>
-            <div className="filters">
-              <input placeholder="Pesquisar por nome, CPF ou telefone..." />
-              <select>
-                <option value="">Todos convênios</option>
-                <option>Particular</option>
-                <option>Unimed</option>
-                <option>Bradesco</option>
-              </select>
-              <button className="btn btn-sm">Filtrar</button>
-            </div>
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>CPF</th>
-                    <th>Data Nasc.</th>
-                    <th>Convênio</th>
-                    <th>Contato</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Pacientes</h3>
+              <table style={styles.table}>
+                <thead><tr><th style={styles.th}>Nome</th><th style={styles.th}>CPF</th><th style={styles.th}>Nascimento</th><th style={styles.th}>Ações</th></tr></thead>
                 <tbody>
-                  {pacientesExemplo.map((p,i) => (
-                    <tr key={i}>
-                      <td>{p.nome}</td>
-                      <td>{p.cpf}</td>
-                      <td>{p.dataNasc}</td>
-                      <td>{p.convenio}</td>
-                      <td>{p.contato}</td>
-                      <td className="actions">
-                        <button className="btn-icon">📄</button>
-                        <button className="btn-icon">✏️</button>
-                        <button className="btn-icon danger">🗑️</button>
-                      </td>
+                  {pacientes.map(item => (
+                    <tr key={item.id}>
+                      <td style={styles.td}>{item.nome}</td><td style={styles.td}>{item.cpf}</td><td style={styles.td}>{item.dataNasc}</td>
+                      <td style={styles.td}><button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Pacientes')}>Editar</button><button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => handleDelete(item.id, 'Pacientes', setPacientes)}>Excluir</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        );
-
-      case "Agendamentos":
-        return (
-          <div className="card">
-            <div className="card-header">
-              <h3>Agendamentos / Calendário</h3>
-            </div>
-            <ul className="agenda-list">
-              {agendamentosExemplo.map((a,i) => (
-                <li key={i} className={a.status === "busy" ? "busy" : ""}>
-                  <div className="time">{a.hora}</div>
-                  <div className="info">
-                    <strong>Consulta — {a.medico} ({a.especialidade})</strong>
-                    <div>Paciente: {a.paciente} • Sala {a.sala}</div>
-                  </div>
-                  <div className="agenda-actions">
-                    <button className="btn-icon">✏️</button>
-                    <button className="btn-icon danger">Cancelar</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="card-footer">
-              <button className="btn btn-primary">Agendar Nova Consulta</button>
-            </div>
-          </div>
         );
 
       case "Médicos":
         return (
-          <div className="grid-3">
-            <div className="card small">
-              <h4>Médicos</h4>
-              <ul className="compact-list">
-                <li>Dr. Pedro — Cardiologia <span className="muted">[09:00–17:00]</span></li>
-                <li>Drª. Ana — Pediatria <span className="muted">[08:00–14:00]</span></li>
-                <li>Dr. Lucas — Ortopedia <span className="muted">[12:00–20:00]</span></li>
-              </ul>
-              <div className="card-actions">
-                <button className="btn-sm">Gerenciar Médicos</button>
-              </div>
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Médicos</h3>
+              <table style={styles.table}>
+                <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
+                <tbody>
+                  {medicos.map(item => (
+                    <tr key={item.id}>
+                      <td style={styles.td}><div style={{ display: 'flex', alignItems: 'center' }}><img src={item.imagem} alt={item.nome} style={styles.tdImage} />{item.nome}</div></td>
+                      <td style={styles.td}>{item.especialidade}</td>
+                      <td style={styles.td}><button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Médicos')}>Editar</button><button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => handleDelete(item.id, 'Médicos', setMedicos)}>Excluir</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
         );
+
+      case "Agendamentos":
+         return (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Agendamentos</h3>
+               <ul style={{padding: 0, listStyle: 'none'}}>
+                {agendamentos.map((a) => (
+                  <li key={a.id} style={{...styles.agendaItem, borderLeftColor: a.status === 'confirmado' ? '#4caf50' : '#ffc107'}}>
+                    <div style={{fontWeight: '600', width: '80px'}}>{a.hora}</div>
+                    <div style={{flexGrow: 1}}><strong>Consulta - {a.medico}</strong><div>Paciente: {a.paciente}</div></div>
+                    <div><button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>Editar</button></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+         );
 
       case "Especialidades":
         return (
-          <div className="grid-3">
-            <div className="card small">
-              <h4>Especialidades</h4>
-              <ul className="compact-list">
-                <li>Cardiologia • 4 médicos</li>
-                <li>Pediatria • 3 médicos</li>
-                <li>Ortopedia • 2 médicos</li>
-              </ul>
-              <div className="card-actions">
-                <button className="btn-sm">Gerenciar Especialidades</button>
-              </div>
+             <div style={styles.card}>
+                <h3 style={styles.cardTitle}>Especialidades</h3>
+                <table style={styles.table}>
+                    <thead><tr><th style={styles.th}>Nome</th><th style={styles.th}>Qtd. Médicos</th><th style={styles.th}>Ações</th></tr></thead>
+                    <tbody>
+                        {especialidades.map((item) => (
+                            <tr key={item.id}>
+                                <td style={styles.td}>{item.nome}</td><td style={styles.td}>{item.medicos}</td>
+                                <td style={styles.td}><button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Especialidades')}>Editar</button></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-          </div>
         );
 
-      case "Vacinas":
+      case "Carteirinha":
+         return (
+             <div style={styles.card}>
+                <h3 style={styles.cardTitle}>Carteirinha de Vacinação</h3>
+                <table style={styles.table}>
+                    <thead><tr><th style={styles.th}>Paciente</th><th style={styles.th}>Vacinas</th><th style={styles.th}>Ações</th></tr></thead>
+                    <tbody>
+                        {vacinas.map((item) => (
+                            <tr key={item.id}>
+                                <td style={styles.td}>{item.paciente}</td><td style={styles.td}>{item.vacinas}</td>
+                                <td style={styles.td}><button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Carteirinha')}>Ver</button></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+         );
+
+      case "Relatórios":
         return (
-          <div className="grid-3">
-            <div className="card small">
-              <h4>Carteirinha de Vacinação</h4>
-              <div className="vac-preview">
-                <p><strong>João Silva</strong></p>
-                <p>2 vacinas registradas • <a href="#">Ver histórico</a></p>
+            <section>
+              <div style={styles.card}><h3 style={styles.cardTitle}>Relatórios Gerenciais</h3></div>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                <div style={styles.card}>
+                  <h4 style={styles.cardTitle}>Consultas por Mês</h4>
+                  <table style={styles.table}>
+                    <thead><tr><th style={styles.th}>Mês</th><th style={styles.th}>Total</th></tr></thead>
+                    <tbody>{dadosRelatorio.consultasPorMes.map((item, i) => (<tr key={i}><td style={styles.td}>{item.mes}</td><td style={styles.td}>{item.total}</td></tr>))}</tbody>
+                  </table>
+                </div>
+                <div style={styles.card}>
+                  <h4 style={styles.cardTitle}>Faturamento por Convênio</h4>
+                  <table style={styles.table}>
+                     <thead><tr><th style={styles.th}>Convênio</th><th style={styles.th}>Valor</th></tr></thead>
+                     <tbody>{dadosRelatorio.faturamentoPorConvenio.map((item, i) => (<tr key={i}><td style={styles.td}>{item.convenio}</td><td style={styles.td}>{item.valor}</td></tr>))}</tbody>
+                  </table>
+                </div>
               </div>
-              <div className="card-actions">
-                <button className="btn-sm">Abrir Carteirinha</button>
-              </div>
-            </div>
-          </div>
+            </section>
         );
 
-      default:
-        return <Dashboard />;
+      default: return <h1>Página não encontrada</h1>;
     }
   };
 
   return (
-    <div className="app">
-      {/* SIDEBAR */}
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="logo">CLÍNICA</div>
-          <div className="brand-sub">Gestão médica</div>
+    <div style={styles.app}>
+      <aside style={styles.sidebar}>
+        <div style={{textAlign: 'center', marginBottom: '30px'}}>
+          <div style={styles.logo}>CLÍNICA</div>
+          <div style={{fontSize: '13px', color: '#777'}}>Gestão Médica</div>
         </div>
-        <nav className="nav">
-          {["Dashboard","Pacientes","Agendamentos","Médicos","Especialidades","Vacinas","Relatórios","Financeiro","Configurações"].map(item => (
-            <button
-              key={item}
-              className={`nav-item ${activePage === item ? "active" : ""}`}
-              onClick={() => setActivePage(item)}
-            >
+        <nav>
+          {["Dashboard", "Pacientes", "Agendamentos", "Médicos", "Especialidades", "Carteirinha", "Relatórios"].map(item => (
+            <button key={item} style={activePage === item ? {...styles.navItem, ...styles.navItemActive} : styles.navItem} onClick={() => setActivePage(item)}>
               {item}
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <small>Usuário: Recepção</small>
-          <button className="btn-logout">Sair</button>
-        </div>
       </aside>
-
-      {/* MAIN */}
-      <main className="main">
-        {/* TOPBAR */}
-        <header className="topbar">
-          <div className="search">
-            <input placeholder="Pesquisar pacientes, CPF, médico, convênio..." />
-          </div>
-          <div className="top-actions">
-            <button className="btn btn-primary">+ Novo Paciente</button>
-            <div className="icon-bell" title="Notificações">
-              <span className="badge">3</span>
-            </div>
-          </div>
+      <main style={styles.main}>
+        <header style={styles.topbar}>
+          <input style={styles.searchInput} placeholder="Pesquisar..." />
+          <button style={styles.btnPrimary}>+ Novo Paciente</button>
         </header>
-
-        {/* CONTEÚDO */}
-        <section className="content">
-          {renderPage()}
-        </section>
+        <section style={styles.content}>{renderPage()}</section>
       </main>
     </div>
   );
 }
+
+const styles = {
+  app: { display: 'flex', fontFamily: 'sans-serif', backgroundColor: '#f4f7f8', minHeight: '100vh' },
+  sidebar: { width: '240px', backgroundColor: '#eaf9f9', padding: '20px 10px', borderRight: '1px solid #e0e0e0' },
+  logo: { fontSize: '24px', fontWeight: '700', color: '#2b9aa3' },
+  navItem: { width: '100%', padding: '12px 15px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '15px', fontWeight: '500', borderRadius: '8px', cursor: 'pointer', marginBottom: '5px' },
+  navItemActive: { backgroundColor: '#2b9aa3', color: 'white' },
+  main: { flexGrow: 1 },
+  topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0' },
+  searchInput: { width: '350px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '8px' },
+  content: { padding: '20px' },
+  card: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '20px' },
+  cardTitle: { marginTop: 0, marginBottom: '15px', borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', color: '#333' },
+  kpi: { fontSize: '32px', fontWeight: '700', margin: '10px 0', color: '#2b9aa3' },
+  dashboardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0', fontSize: '13px', color: '#777', textTransform: 'uppercase' },
+  td: { padding: '12px 15px', borderBottom: '1px solid #e0e0e0', verticalAlign: 'middle' },
+  tdImage: { width: '50px', height: '50px', borderRadius: '50%', marginRight: '15px', objectFit: 'cover' },
+  btnPrimary: { padding: '10px 15px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', backgroundColor: '#2b9aa3', color: 'white' },
+  btnIcon: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px', marginRight: '10px', color: '#555', fontWeight: 'bold' },
+  agendaItem: { display: 'flex', alignItems: 'center', padding: '15px', borderBottom: '1px solid #e0e0e0', borderLeft: '4px solid' },
+};
 
 export default App;
