@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
+import { addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore'; 
+
+import { 
+    pacientesCollection, 
+    medicosCollection, 
+    agendamentosCollection,
+    db
+} from './firebaseConfig';
+
+
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard');
-
-  const [pacientes, setPacientes] = useState([
-    { id: 1, nome: "João Silva", cpf: "123.456.789-00", dataNasc: "12/05/1980", convenio: "Unimed" },
-    { id: 2, nome: "Maria Souza", cpf: "222.333.444-55", dataNasc: "20/11/1992", convenio: "Particular" },
-  ]);
+    const [pacientes, setPacientes] = useState([]);
+//   const [pacientes, setPacientes] = useState([
+//     { id: 1, nome: "João Silva", cpf: "123.456.789-00", dataNasc: "12/05/1980", convenio: "Unimed" },
+//     { id: 2, nome: "Maria Souza", cpf: "222.333.444-55", dataNasc: "20/11/1992", convenio: "Particular" },
+//   ]);
   const [agendamentos, setAgendamentos] = useState([
     { id: 1, hora: "08:30", paciente: "João Silva", medico: "Dr. Pedro", especialidade: "Cardiologia", status: "confirmado" },
     { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
@@ -43,16 +53,48 @@ function App() {
     setFormPaciente(prevForm => ({ ...prevForm, [name]: value }));
   };
 
-  const handleSavePaciente = () => {
-    if (!formPaciente.nome || !formPaciente.cpf || !formPaciente.dataNasc) {
-      alert("Por favor, preencha Nome, CPF e Data de Nascimento.");
-      return;
-    }
-    const novoPaciente = { id: Date.now(), ...formPaciente };
-    setPacientes(prevPacientes => [...prevPacientes, novoPaciente]);
-    setFormPaciente({ nome: '', cpf: '', dataNasc: '', convenio: '' });
-    setShowModalPaciente(false);
-  };
+// ... dentro da função App()
+
+  useEffect(() => {
+    // Carregar Pacientes do Firestore
+    const q = query(pacientesCollection, orderBy("nome", "asc"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const pacientesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPacientes(pacientesData);
+    }, (error) => {
+      console.error("Erro ao carregar pacientes: ", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+const handleSavePaciente = async () => { 
+  if (!formPaciente.nome || !formPaciente.cpf || !formPaciente.dataNasc) {
+    alert("Por favor, preencha Nome, CPF e Data de Nascimento.");
+    return;
+  }
+  
+  try {
+    await addDoc(pacientesCollection, {
+      nome: formPaciente.nome,
+      cpf: formPaciente.cpf,
+      dataNasc: formPaciente.dataNasc, // Salva a string 'YYYY-MM-DD'
+      convenio: formPaciente.convenio || 'Particular',
+      dataCadastro: new Date().toISOString(), 
+    });
+
+    alert(`Paciente "${formPaciente.nome}" salvo com sucesso!`);
+    setFormPaciente({ nome: '', cpf: '', dataNasc: '', convenio: '' });
+    setShowModalPaciente(false);
+    
+  } catch (error) {
+    console.error("ERRO ao adicionar paciente (Verifique as Regras de Segurança!): ", error);
+    alert("ERRO ao salvar paciente. Verifique o console (F12)!");
+  }
+};
 
   // --- RENDERIZAÇÃO DAS PÁGINAS ---
   const renderPage = () => {
