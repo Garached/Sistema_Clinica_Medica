@@ -1,5 +1,7 @@
 import React, { useState ,useEffect} from 'react';
 import { addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore'; 
+import Login from "./Login";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 import { 
     pacientesCollection, 
@@ -12,7 +14,8 @@ import {
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard');
-    const [pacientes, setPacientes] = useState([]);
+  const [pacientes, setPacientes] = useState([]);
+  const [user, setUser] = useState(null);
 //   const [pacientes, setPacientes] = useState([
 //     { id: 1, nome: "João Silva", cpf: "123.456.789-00", dataNasc: "12/05/1980", convenio: "Unimed" },
 //     { id: 2, nome: "Maria Souza", cpf: "222.333.444-55", dataNasc: "20/11/1992", convenio: "Particular" },
@@ -59,7 +62,6 @@ const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', hora
   };
 // ... dentro da função App()
 
-//PACIENTEEESS
   useEffect(() => {
     // Carregar Pacientes do Firestore
     const q = query(pacientesCollection, orderBy("nome", "asc"));
@@ -67,106 +69,92 @@ const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', hora
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const pacientesData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setPacientes(pacientesData);
-    }, (error) => {
+    },
+    (error) => {
       console.error("Erro ao carregar pacientes: ", error);
-    });
+    }
+  );
 
     return () => unsubscribe();
   }, []);
-
-  //MÉDICOSS
   useEffect(() => {
+    // Carregar Médicos do Firestore
     const q = query(medicosCollection, orderBy("nome", "asc"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const medicosData = [];
-      const contagemEspecialidades = {}; 
-
-      snapshot.docs.forEach(doc => {
-        const medico = {
-          id: doc.id,
-          ...doc.data()
-        };
-        
-        medicosData.push(medico);
-
-        const esp = medico.especialidade;
-        if (esp) {
-          contagemEspecialidades[esp] = (contagemEspecialidades[esp] || 0) + 1;
-        }
-      });
-      
-      setMedicos(medicosData);
-
-      const especialidadesList = Object.keys(contagemEspecialidades).map((nome, index) => ({
-        id: index, 
-        nome: nome,
-        medicos: contagemEspecialidades[nome],
+      const medicosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        // Adiciona um URL de imagem padrão caso o campo 'imagem' não exista no Firestore
+        imagem: doc.data().imagem || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop',
+        ...doc.data()
       }));
       
-      setEspecialidades(especialidadesList); 
-
+      // 🟢 CORRIGIDO: Chame a função setMedicos e passe o array medicosData
+      setMedicos(medicosData); 
+      
     }, (error) => {
-      console.error("Erro ao carregar médicos e especialidades: ", error);
+      console.error("Erro ao carregar médicos: ", error);
     });
 
     return () => unsubscribe();
   }, []);
-
-  
 const handleSavePaciente = async () => { 
   if (!formPaciente.nome || !formPaciente.cpf || !formPaciente.dataNasc) {
     alert("Por favor, preencha Nome, CPF e Data de Nascimento.");
     return;
   }
-  
+
   try {
     await addDoc(pacientesCollection, {
       nome: formPaciente.nome,
       cpf: formPaciente.cpf,
-      dataNasc: formPaciente.dataNasc, // Salva a string 'YYYY-MM-DD'
-      convenio: formPaciente.convenio || 'Particular',
-      dataCadastro: new Date().toISOString(), 
+      dataNasc: formPaciente.dataNasc, // Salva como string 'YYYY-MM-DD'
+      convenio: formPaciente.convenio || "Particular",
+      dataCadastro: new Date().toISOString(),
     });
 
     alert(`Paciente "${formPaciente.nome}" salvo com sucesso!`);
-    setFormPaciente({ nome: '', cpf: '', dataNasc: '', convenio: '' });
+    setFormPaciente({ nome: "", cpf: "", dataNasc: "", convenio: "" });
     setShowModalPaciente(false);
-    
   } catch (error) {
-    console.error("ERRO ao adicionar paciente (Verifique as Regras de Segurança!): ", error);
+    console.error(
+      "ERRO ao adicionar paciente (Verifique as Regras de Segurança!): ",
+      error
+    );
     alert("ERRO ao salvar paciente. Verifique o console (F12)!");
   }
 };
-const handleSaveMedico = async () => {
-    if (!formMedico.nome || !formMedico.especialidade || !formMedico.horario) {
-      alert("Por favor, preencha Nome, Especialidade e Horário de trabalho.");
-      return;
-    }
-    
-    try {
-      // 🚨 ATENÇÃO: Use 'medicosCollection'
-      await addDoc(medicosCollection, {
-        nome: formMedico.nome,
-        especialidade: formMedico.especialidade,
-        horario: formMedico.horario,
-        imagem: formMedico.imagem || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?fit=crop&w=50', // Imagem default
-        dataCadastro: new Date().toISOString(), 
-      });
 
-      alert(`Médico(a) "${formMedico.nome}" salvo com sucesso!`);
-      // Limpa e fecha o modal
-      setFormMedico({ nome: '', especialidade: '', horario: '', imagem: '' });
-      setShowModalMedico(false);
-      
-    } catch (error) {
-      console.error("ERRO ao adicionar médico:", error);
-      alert("ERRO ao salvar médico. Verifique o console (F12)!");
-    }
-  };
+// 🔹 Função para salvar Médico
+const handleSaveMedico = async () => {
+  if (!formMedico.nome || !formMedico.especialidade || !formMedico.horario) {
+    alert("Por favor, preencha Nome, Especialidade e Horário de trabalho.");
+    return;
+  }
+
+  try {
+    await addDoc(medicosCollection, {
+      nome: formMedico.nome,
+      especialidade: formMedico.especialidade,
+      horario: formMedico.horario,
+      imagem:
+        formMedico.imagem ||
+        "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?fit=crop&w=50",
+      dataCadastro: new Date().toISOString(),
+    });
+
+    alert(`Médico(a) "${formMedico.nome}" salvo com sucesso!`);
+    setFormMedico({ nome: "", especialidade: "", horario: "", imagem: "" });
+    setShowModalMedico(false);
+  } catch (error) {
+    console.error("ERRO ao adicionar médico:", error);
+    alert("ERRO ao salvar médico. Verifique o console (F12)!");
+  }
+};
+
 
   // --- RENDERIZAÇÃO DAS PÁGINAS ---
   const renderPage = () => {
