@@ -21,15 +21,13 @@ function App() {
     { id: 1, hora: "08:30", paciente: "João Silva", medico: "Dr. Pedro", especialidade: "Cardiologia", status: "confirmado" },
     { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
   ]);
-  const [medicos, setMedicos] = useState([
-//     { id: 1, nome: "Dr. Pedro Almeida", especialidade: "Cardiologia", horario: "09:00-17:00", imagem: "https://images.unsplash.com/photo-1537368910025-7003507965b6?w=500&auto=format&fit=crop" },
-//     { id: 2, nome: "Dra. Ana Souza", especialidade: "Pediatria", horario: "08:00-14:00", imagem: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop" },
-  ]);
+  const [medicos, setMedicos] = useState([]);
   const [especialidades, setEspecialidades] = useState([
     { id: 1, nome: "Cardiologia", medicos: 4 },
     { id: 2, nome: "Pediatria", medicos: 3 },
   ]);
   const [vacinas, setVacinas] = useState([{ id: 1, paciente: "João Silva", vacinas: 2 }]);
+
   const dadosRelatorio = {
     consultasPorMes: [{ mes: 'Setembro', total: 250 }, { mes: 'Outubro', total: 210 }],
     faturamentoPorConvenio: [{ convenio: 'Unimed', valor: 'R$ 42.850' }, { convenio: 'Particular', valor: 'R$ 23.100' }],
@@ -61,6 +59,7 @@ const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', hora
   };
 // ... dentro da função App()
 
+//PACIENTEEESS
   useEffect(() => {
     // Carregar Pacientes do Firestore
     const q = query(pacientesCollection, orderBy("nome", "asc"));
@@ -77,27 +76,47 @@ const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', hora
 
     return () => unsubscribe();
   }, []);
+
+  //MÉDICOSS
   useEffect(() => {
-    // Carregar Médicos do Firestore
     const q = query(medicosCollection, orderBy("nome", "asc"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const medicosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        // Adiciona um URL de imagem padrão caso o campo 'imagem' não exista no Firestore
-        imagem: doc.data().imagem || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop',
-        ...doc.data()
+      const medicosData = [];
+      const contagemEspecialidades = {}; 
+
+      snapshot.docs.forEach(doc => {
+        const medico = {
+          id: doc.id,
+          ...doc.data()
+        };
+        
+        medicosData.push(medico);
+
+        const esp = medico.especialidade;
+        if (esp) {
+          contagemEspecialidades[esp] = (contagemEspecialidades[esp] || 0) + 1;
+        }
+      });
+      
+      setMedicos(medicosData);
+
+      const especialidadesList = Object.keys(contagemEspecialidades).map((nome, index) => ({
+        id: index, 
+        nome: nome,
+        medicos: contagemEspecialidades[nome],
       }));
       
-      // 🟢 CORRIGIDO: Chame a função setMedicos e passe o array medicosData
-      setMedicos(medicosData); 
-      
+      setEspecialidades(especialidadesList); 
+
     }, (error) => {
-      console.error("Erro ao carregar médicos: ", error);
+      console.error("Erro ao carregar médicos e especialidades: ", error);
     });
 
     return () => unsubscribe();
   }, []);
+
+  
 const handleSavePaciente = async () => { 
   if (!formPaciente.nome || !formPaciente.cpf || !formPaciente.dataNasc) {
     alert("Por favor, preencha Nome, CPF e Data de Nascimento.");
@@ -165,6 +184,7 @@ const handleSaveMedico = async () => {
         return (
           <div style={styles.card}>
             <h3 style={styles.cardTitle}>Pacientes</h3>
+            <button style={styles.btnPrimary} onClick={() => setShowModalPaciente(true)}>+ Novo Paciente</button>
             <table style={styles.table}>
               <thead><tr><th style={styles.th}>Nome</th><th style={styles.th}>CPF</th><th style={styles.th}>Nascimento</th><th style={styles.th}>Convênio</th><th style={styles.th}>Ações</th></tr></thead>
               <tbody>
@@ -232,28 +252,30 @@ const handleSaveMedico = async () => {
           </div>
         );
 
-      case "Especialidades":
-        return (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>Especialidades</h3>
-            <table style={styles.table}>
-              <thead><tr><th style={styles.th}>Nome</th><th style={styles.th}>Qtd. Médicos</th><th style={styles.th}>Ações</th></tr></thead>
-              <tbody>
-                {especialidades.map((item) => (
-                  <tr key={item.id}>
-                    <td style={styles.td}>{item.nome}</td>
-                    <td style={styles.td}>{item.medicos}</td>
-                    <td style={styles.td}>
-                      <div style={styles.actionsCell}> {/* Envolve botões para alinhamento */}
-                        <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Especialidades')}>✏️ Editar</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+      // ... dentro da função renderPage()
+      case "Especialidades":
+        return (
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>Especialidades</h3>
+            <table style={styles.table}>
+              <thead><tr><th style={styles.th}>Nome</th><th style={styles.th}>Qtd. Médicos</th><th style={styles.th}>Ações</th></tr></thead>
+              <tbody>
+                {especialidades.map((item) => ( 
+                  <tr key={item.id}>
+                    <td style={styles.td}>{item.nome}</td>
+                    {/* AQUI ESTÁ A CONTAGEM AUTOMÁTICA! */}
+                    <td style={styles.td}>{item.medicos}</td> 
+                    <td style={styles.td}>
+                      <div style={styles.actionsCell}> 
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+// ...
 
       case "Carteirinha":
         return (
@@ -323,7 +345,6 @@ const handleSaveMedico = async () => {
       <main style={styles.main}>
         <header style={styles.topbar}>
           <input style={styles.searchInput} placeholder="Pesquisar..." />
-          <button style={styles.btnPrimary} onClick={() => setShowModalPaciente(true)}>+ Novo Paciente</button>
         </header>
         <section style={styles.content}>{renderPage()}</section>
       </main>
