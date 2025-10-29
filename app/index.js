@@ -22,8 +22,8 @@ function App() {
     { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
   ]);
   const [medicos, setMedicos] = useState([
-    { id: 1, nome: "Dr. Pedro Almeida", especialidade: "Cardiologia", horario: "09:00-17:00", imagem: "https://images.unsplash.com/photo-1537368910025-7003507965b6?w=500&auto=format&fit=crop" },
-    { id: 2, nome: "Dra. Ana Souza", especialidade: "Pediatria", horario: "08:00-14:00", imagem: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop" },
+//     { id: 1, nome: "Dr. Pedro Almeida", especialidade: "Cardiologia", horario: "09:00-17:00", imagem: "https://images.unsplash.com/photo-1537368910025-7003507965b6?w=500&auto=format&fit=crop" },
+//     { id: 2, nome: "Dra. Ana Souza", especialidade: "Pediatria", horario: "08:00-14:00", imagem: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop" },
   ]);
   const [especialidades, setEspecialidades] = useState([
     { id: 1, nome: "Cardiologia", medicos: 4 },
@@ -36,7 +36,9 @@ function App() {
   };
 
   const [showModalPaciente, setShowModalPaciente] = useState(false);
+  const [showModalMedico, setShowModalMedico] = useState(false);
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
+const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
 
   const handleEdit = (id, tipo) => {
     alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
@@ -53,6 +55,10 @@ function App() {
     setFormPaciente(prevForm => ({ ...prevForm, [name]: value }));
   };
 
+  const handleInputChangeMedico = (event) => {
+    const { name, value } = event.target;
+    setFormMedico(prevForm => ({ ...prevForm, [name]: value }));
+  };
 // ... dentro da função App()
 
   useEffect(() => {
@@ -67,6 +73,27 @@ function App() {
       setPacientes(pacientesData);
     }, (error) => {
       console.error("Erro ao carregar pacientes: ", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+  useEffect(() => {
+    // Carregar Médicos do Firestore
+    const q = query(medicosCollection, orderBy("nome", "asc"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const medicosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        // Adiciona um URL de imagem padrão caso o campo 'imagem' não exista no Firestore
+        imagem: doc.data().imagem || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop',
+        ...doc.data()
+      }));
+      
+      // 🟢 CORRIGIDO: Chame a função setMedicos e passe o array medicosData
+      setMedicos(medicosData); 
+      
+    }, (error) => {
+      console.error("Erro ao carregar médicos: ", error);
     });
 
     return () => unsubscribe();
@@ -95,6 +122,32 @@ const handleSavePaciente = async () => {
     alert("ERRO ao salvar paciente. Verifique o console (F12)!");
   }
 };
+const handleSaveMedico = async () => {
+    if (!formMedico.nome || !formMedico.especialidade || !formMedico.horario) {
+      alert("Por favor, preencha Nome, Especialidade e Horário de trabalho.");
+      return;
+    }
+    
+    try {
+      // 🚨 ATENÇÃO: Use 'medicosCollection'
+      await addDoc(medicosCollection, {
+        nome: formMedico.nome,
+        especialidade: formMedico.especialidade,
+        horario: formMedico.horario,
+        imagem: formMedico.imagem || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?fit=crop&w=50', // Imagem default
+        dataCadastro: new Date().toISOString(), 
+      });
+
+      alert(`Médico(a) "${formMedico.nome}" salvo com sucesso!`);
+      // Limpa e fecha o modal
+      setFormMedico({ nome: '', especialidade: '', horario: '', imagem: '' });
+      setShowModalMedico(false);
+      
+    } catch (error) {
+      console.error("ERRO ao adicionar médico:", error);
+      alert("ERRO ao salvar médico. Verifique o console (F12)!");
+    }
+  };
 
   // --- RENDERIZAÇÃO DAS PÁGINAS ---
   const renderPage = () => {
@@ -124,7 +177,6 @@ const handleSavePaciente = async () => {
                     <td style={styles.td}>
                       <div style={styles.actionsCell}> {/* Envolve botões para alinhamento */}
                         <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Pacientes')}>✏️ Editar</button>
-                        <button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => handleDelete(item.id, 'Pacientes', setPacientes)}>🗑️ Excluir</button>
                       </div>
                     </td>
                   </tr>
@@ -138,6 +190,7 @@ const handleSavePaciente = async () => {
         return (
           <div style={styles.card}>
             <h3 style={styles.cardTitle}>Médicos</h3>
+<button style={styles.btnPrimary} onClick={() => setShowModalMedico(true)}>+ Novo Médico</button>
             <table style={styles.table}>
               <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
               <tbody>
@@ -303,8 +356,69 @@ const handleSavePaciente = async () => {
           </div>
         </div>
       )}
-    </div>
-  );
+    {/* --- MODAL DE NOVO MÉDICO --- */}
+  {showModalMedico && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={styles.cardTitle}>Cadastrar Novo Médico</h3>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Nome Completo:</label>
+              <input 
+                type="text" 
+                name="nome" 
+                value={formMedico.nome} 
+                onChange={handleInputChangeMedico} 
+                style={styles.input} 
+              />
+            </div>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Especialidade:</label>
+              <input 
+                type="text" 
+                name="especialidade" 
+                value={formMedico.especialidade} 
+                onChange={handleInputChangeMedico} 
+                style={styles.input} 
+                placeholder="Ex: Cardiologia, Pediatria"
+              />
+            </div>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Horário de Trabalho:</label>
+              <input 
+                type="text" 
+                name="horario" 
+                value={formMedico.horario} 
+                onChange={handleInputChangeMedico} 
+                style={styles.input} 
+                placeholder="Ex: 08:00-17:00"
+              />
+            </div>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>URL da Imagem (Opcional):</label>
+              <input 
+                type="text" 
+                name="imagem" 
+                value={formMedico.imagem} 
+                onChange={handleInputChangeMedico} 
+                style={styles.input} 
+                placeholder="URL de uma foto do médico"
+              />
+            </div>
+            
+            <div style={styles.modalActions}>
+              <button style={styles.btnPrimary} onClick={handleSaveMedico}>Salvar Médico</button>
+              <button style={styles.btnSecondary} onClick={() => setShowModalMedico(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
 }
 
 const styles = {
