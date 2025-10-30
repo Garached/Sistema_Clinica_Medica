@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import App from "./App";
 import { auth } from "./firebaseConfig";
 
@@ -8,6 +8,10 @@ export default function Login({ onLoginSuccess }) {
   const [senha, setSenha] = useState("");
   const [user, setUser] = useState(null);
   const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    document.title = "Login Clínica Médica";
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -76,7 +80,7 @@ const styles = {
     boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
     width: "360px",
     textAlign: "center",
-    boxSizing: "border-box", // garante que o padding não aumente a largura
+    boxSizing: "border-box",
   },
   title: {
     marginBottom: "28px",
@@ -87,7 +91,7 @@ const styles = {
   form: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "stretch", // alinha 100% inputs e botão
+    alignItems: "stretch",
   },
   input: {
     width: "100%",
@@ -98,7 +102,7 @@ const styles = {
     fontSize: "15px",
     outline: "none",
     transition: "border 0.3s",
-    boxSizing: "border-box", // evita desalinhamento horizontal
+    boxSizing: "border-box",
   },
   button: {
     width: "100%",
@@ -111,9 +115,6 @@ const styles = {
     fontSize: "16px",
     fontWeight: "bold",
     transition: "background-color 0.3s",
-  },
-  buttonHover: {
-    backgroundColor: "#0069d9",
   },
   error: {
     marginTop: "15px",
