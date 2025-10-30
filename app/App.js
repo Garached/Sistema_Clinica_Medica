@@ -1,5 +1,5 @@
-import { signOut } from "firebase/auth";
-import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { signOut, createUserWithEmailAndPassword } from 'firebase/auth'; 
+import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   auth,
@@ -135,18 +135,18 @@ function App() {
 
   // USE EFFECT PARA CARREGAR FUNCIONÁRIOS 
    useEffect(() => {
-    const q = query(funcionariosCollection, orderBy("nome", "asc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const funcionariosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setFuncionarios(funcionariosData);
-    }, (error) => {
-      console.error("Erro ao carregar funcionarios: ", error);
-    });
-    return () => unsubscribe();
-  }, []);
+  const q = query(funcionariosCollection, orderBy("nome", "asc"));
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const funcionariosData = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setFuncionarios(funcionariosData);
+  }, (error) => {
+    console.error("Erro ao carregar funcionarios: ", error);
+  });
+  return () => unsubscribe();
+}, []);
 
 
   // --- FUNÇÕES DE SALVAR DADOS ---
@@ -200,38 +200,59 @@ function App() {
     }
   };
 
-  // FUNÇÃO PARA CADASTRAR FUNCIONÁRIO (AUTH + FIRESTORE)
-  const handleSaveFuncionario = async () => {
-    const { nome, email, senha } = formFuncionario;
+  // --- FUNÇÃO DE SALVAR FUNCIONÁRIOS ---
 
-    if (!nome || !email || !senha) {
-      alert("Por favor, preencha Nome, Email e Senha.");
-      return;
-    }
+const handleSaveFuncionario = async () => {
+  const { nome, email, senha } = formFuncionario;
+
+  if (!nome || !email || !senha) {
+    alert("Por favor, preencha Nome, Email e Senha.");
+    return;
+  }
+
+  try {
+    // 1. CRIAR A CONTA DE LOGIN NO FIREBASE AUTH
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      senha
+    );
+    const uid = userCredential.user.uid;
+
+    // 2. SALVAR DADOS DE PERFIL NO FIRESTORE (como você faz com Pacientes, mas usando setDoc)
+    // Usamos setDoc com o UID como ID do documento, para ligar a conta Auth ao perfil.
+    const funcionarioRef = doc(funcionariosCollection, uid);
+
+    await setDoc(funcionarioRef, {
+      nome: nome,
+      email: email,
+      cargo: "Administrativo", 
+      dataCadastro: new Date().toISOString(),
+    });
+
+    alert(`Funcionário "${nome}" e conta de login criados com sucesso!`);
     
-    try {
-      // 1. Cria o usuário no Firebase AUTH
-      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-      const uid = userCredential.user.uid;
+    // Limpar o formulário e fechar o modal
+    setFormFuncionario({ nome: "", email: "", senha: "" });
+    setShowModalFuncionario(false);
 
-      // 2. Salva os dados (Nome, Email) no Firestore para a lista
-      await addDoc(funcionariosCollection, {
-        uid: uid,
-        nome: nome,
-        email: email,
-        cargo: "Funcionário", 
-        dataCadastro: new Date().toISOString(),
-      });
-
-      alert(`Funcionário ${nome} cadastrado com sucesso!`);
-      setFormFuncionario({ nome: '', email: '', senha: '' });
-      setShowModalFuncionario(false);
-
-    } catch (error) {
-      console.error("ERRO ao cadastrar funcionário:", error);
-      alert(`ERRO ao cadastrar. Detalhe: ${error.message}`);
+  } catch (error) {
+    console.error(
+      "ERRO ao cadastrar funcionário. Código: ",
+      error.code,
+      error.message
+    );
+    
+    let mensagemErro = "ERRO ao salvar funcionário. Verifique o console (F12)!";
+    if (error.code === 'auth/email-already-in-use') {
+        mensagemErro = "O e-mail fornecido já está em uso por outra conta.";
+    } else if (error.code === 'auth/weak-password') {
+        mensagemErro = "A senha deve ter pelo menos 6 caracteres.";
     }
-  };
+
+    alert(mensagemErro);
+  }
+};
 
   // FUNÇÃO PARA EXCLUIR FUNCIONÁRIO DO FIRESTORE
   const handleDeleteFuncionario = async (id, email) => {
