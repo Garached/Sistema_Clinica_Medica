@@ -9,14 +9,14 @@ import {
   pacientesCollection,
   vacinasCollection
 } from './firebaseConfig';
-import Login from "./index.jsx"; 
+import Login from "./index.jsx";
 // Importar o restante das coleções (Pacientes, Médicos, etc.) no seu firebaseConfig.js
 // é crucial para o código abaixo funcionar.
 
 function App() {
   const sair = () => {
     signOut(auth).then(() => {
-      window.location.reload(); 
+      window.location.reload(); // volta pra tela de login
     });
   };
 
@@ -44,7 +44,9 @@ function App() {
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
-
+  const [formVacina, setFormVacina] = useState({ pacienteId: '', dataVacina: '', vacina: '' });
+  const [formFuncionario, setFormFuncionario] = useState({ nome: '', email: '', senha: '' });
+  
   // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
   const handleEdit = (id, tipo) => {
@@ -75,6 +77,11 @@ function App() {
         const { name, value } = event.target;
         setFormVacina(prevForm => ({ ...prevForm, [name]: value }));
     };
+  
+  useEffect(() => {
+    document.title = "Clínica Médica"; 
+  }, []);
+
 
   
   // USE EFFECT PARA CARREGAR PACIENTES
@@ -662,10 +669,10 @@ const styles = {
     transition: 'background 0.3s',
   },  
   navItemActive: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#e0e0e0', 
     fontWeight: 'bold',
-  },  
-  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
+  },
+  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
   searchInput: { width: '350px', padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
   content: { padding: '25px', flexGrow: 1, overflowY: 'auto' },

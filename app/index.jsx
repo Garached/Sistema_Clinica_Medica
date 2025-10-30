@@ -1,4 +1,6 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useState } from "react";
+import App from "./App";
 import { auth } from "./firebaseConfig";
 
 export default function Login({ onLoginSuccess }) {
@@ -45,7 +47,6 @@ export default function Login({ onLoginSuccess }) {
             required
             style={styles.input}
           />
-
           <button type="submit" style={styles.button}>
             Entrar
           </button>
@@ -57,6 +58,7 @@ export default function Login({ onLoginSuccess }) {
   );
 }
 
+// 🎨 Estilos padronizados (iguais ao resto das páginas)
 const styles = {
   container: {
     display: "flex",
@@ -101,9 +103,6 @@ const styles = {
     fontSize: "16px",
     fontWeight: "bold",
     transition: "background-color 0.3s",
-  },
-  buttonHover: {
-    backgroundColor: "#0056b3",
   },
   error: {
     marginTop: "15px",
