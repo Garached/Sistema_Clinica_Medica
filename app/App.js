@@ -9,8 +9,9 @@ import {
   pacientesCollection,
   vacinasCollection
 } from './firebaseConfig';
-import Login from "./index.jsx";
-
+import Login from "./index.jsx"; 
+// Importar o restante das coleções (Pacientes, Médicos, etc.) no seu firebaseConfig.js
+// é crucial para o código abaixo funcionar.
 
 function App() {
   const sair = () => {
@@ -43,13 +44,8 @@ function App() {
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
-  const [formVacina, setFormVacina] = useState({ pacienteId: '', dataVacina: '', vacina: '' });
-  const [formFuncionario, setFormFuncionario] = useState({ nome: '', email: '', senha: '' });
-  
-  useEffect(() => {
-  document.title = "Clínica Médica"; 
-}, []);
 
+  // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
   const handleEdit = (id, tipo) => {
     alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
