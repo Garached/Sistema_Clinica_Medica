@@ -29,6 +29,8 @@ function App() {
   const [medicos, setMedicos] = useState([]);
   const [vacinas, setVacinas] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
+  const [carteirinhaAgrupada, setCarteirinhaAgrupada] = useState([]);
+  
   
   const [especialidades, setEspecialidades] = useState([]);
 
@@ -41,12 +43,14 @@ function App() {
   const [showModalMedico, setShowModalMedico] = useState(false);
   const [showModalVacina, setShowModalVacina] = useState(false);
   const [showModalFuncionario, setShowModalFuncionario] = useState(false);
+  const [showModalDetalhesVacinas, setShowModalDetalhesVacinas] = useState(false);
+  const [pacienteEmDetalhe, setPacienteEmDetalhe] = useState(null);
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
   const [formVacina, setFormVacina] = useState({ pacienteId: '', dataVacina: '', vacina: '' });
   const [formFuncionario, setFormFuncionario] = useState({ nome: '', email: '', senha: '' });
-  
+
   // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
   const handleEdit = (id, tipo) => {
@@ -153,6 +157,69 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // USE EFFECT PARA CARREGAR REGISTROS DE VACINAS
+  useEffect(() => {
+    const q = query(vacinasCollection, orderBy("dataVacina", "desc")); // Ordena pela data da vacina
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const vacinasData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setVacinas(vacinasData); // Popula o estado de vacinas
+    }, (error) => {
+      console.error("Erro ao carregar vacinas: ", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // USE EFFECT PARA AGRUPAR VACINAS POR PACIENTE
+  useEffect(() => {
+    if (pacientes.length === 0 || vacinas.length === 0) {
+      // Se não há pacientes ou vacinas, retorna um array vazio (ou o que for necessário)
+      // O return vazio aqui garante que, se só um array foi carregado, não haverá erro.
+      if (pacientes.length > 0) {
+        // Garante que pacientes sem vacina apareçam com 0 vacinas
+        setCarteirinhaAgrupada(pacientes.map(p => ({
+          id: p.id,
+          nome: p.nome,
+          totalVacinas: 0,
+          detalhes: [],
+        })));
+      } else {
+        setCarteirinhaAgrupada([]);
+      }
+      return;
+    }
+
+    const vacinasPorPaciente = vacinas.reduce((acc, vacina) => {
+      const pacienteId = vacina.pacienteId;
+      if (!acc[pacienteId]) {
+        acc[pacienteId] = [];
+      }
+
+      acc[pacienteId].push({
+        idVac: vacina.id,
+        vacina: vacina.vacina,
+        data: vacina.dataVacina,
+      });
+      return acc;
+    }, {});
+
+    const listaAgrupada = pacientes.map(paciente => {
+      const detalhesVacinas = vacinasPorPaciente[paciente.id] || [];
+      return {
+        id: paciente.id,
+        nome: paciente.nome,
+        totalVacinas: detalhesVacinas.length,
+        detalhes: detalhesVacinas,
+      };
+    });
+
+    setCarteirinhaAgrupada(listaAgrupada);
+    
+  }, [pacientes, vacinas]);
 
   // --- FUNÇÕES DE SALVAR DADOS ---
 
@@ -249,6 +316,12 @@ function App() {
         alert("Erro ao excluir funcionário.");
       }
     }
+  };
+
+  // FUNÇÃO PARA VISUALIZAR CARTEIRINHA DE VACINAÇÃO
+  const handleViewCarteirinha = (paciente) => {
+    setPacienteEmDetalhe(paciente); // Define qual paciente ver
+    setShowModalDetalhesVacinas(true); // Abre o modal
   };
 
   const handleSaveVacina = async () => {
@@ -388,51 +461,34 @@ function App() {
         );
 
       case "Carteirinha":
-          return (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Carteirinha de Vacinação</h3>
-              <button style={styles.btnPrimary} onClick={() => setShowModalVacina(true)}>+ Adicionar Vacina</button>
-              <table style={styles.table}>
-                <thead><tr><th style={styles.th}>Paciente</th><th style={styles.th}>Vacinas</th><th style={styles.th}>Ações</th></tr></thead>
-                <tbody>
-                  {vacinas.map((item) => (
-                    <tr key={item.id}>
-                      <td style={styles.td}>{item.paciente}</td>
-                      <td style={styles.td}>{item.vacinas}</td>
-                      <td style={styles.td}>
-                        <div style={styles.actionsCell}> {/* Envolve botões para alinhamento */}
-                          <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Carteirinha')}>👁️ Ver</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-
-        case "Relatórios":
-          return (
-            <section>
-              <div style={styles.card}><h3 style={styles.cardTitle}>Relatórios Gerenciais</h3></div>
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px'}}> {/* Ajuste no grid */}
-                <div style={styles.card}>
-                  <h4 style={styles.cardTitle}>Consultas por Mês</h4>
-                  <table style={styles.table}>
-                    <thead><tr><th style={styles.th}>Mês</th><th style={styles.th}>Total</th></tr></thead>
-                    <tbody>{dadosRelatorio.consultasPorMes.map((item, i) => (<tr key={i}><td style={styles.td}>{item.mes}</td><td style={styles.td}>{item.total}</td></tr>))}</tbody>
-                  </table>
-                </div>
-                <div style={styles.card}>
-                  <h4 style={styles.cardTitle}>Faturamento por Convênio</h4>
-                  <table style={styles.table}>
-                    <thead><tr><th style={styles.th}>Convênio</th><th style={styles.th}>Valor</th></tr></thead>
-                    <tbody>{dadosRelatorio.faturamentoPorConvenio.map((item, i) => (<tr key={i}><td style={styles.td}>{item.convenio}</td><td style={styles.td}>{item.valor}</td></tr>))}</tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          );
+        return (
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>Carteirinha de Vacinação</h3>
+            <button style={styles.btnPrimary} onClick={() => setShowModalVacina(true)}>+ Adicionar Vacina</button>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Paciente</th>
+                  <th style={styles.th}>Qtd. Vacinas</th>
+                  <th style={styles.th}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {carteirinhaAgrupada.map((item) => ( 
+                  <tr key={item.id}>
+                    <td style={styles.td}>{item.nome}</td>
+                    <td style={styles.td}>{item.totalVacinas}</td>
+                    <td style={styles.td}>
+                      <div style={styles.actionsCell}>
+                        <button style={styles.btnIcon} onClick={() => handleViewCarteirinha(item)}>👁️ Ver</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
         
       // CASE PARA FUNCIONÁRIOS
       case "Funcionários":
@@ -614,41 +670,82 @@ if (!user) {
       )}
 
       {/* --- MODAL DE NOVA VACINA --- */}
-        {showModalVacina && (
-          <div style={styles.modalOverlay}>
-            <div style={styles.modalContent}>
-              <h3 style={styles.cardTitle}>Adicionar Nova Vacina</h3>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Paciente:</label>
-                <select
-                  name="pacienteId"
-                  value={formVacina.pacienteId}
-                  onChange={handleInputChangeVacina}
-                  style={styles.input}
-                >
-                  <option value="">Selecione um paciente</option>
-                  {pacientes.map((paciente) => (
-                    <option key={paciente.id} value={paciente.id}>
-                      {paciente.nome} — {paciente.cpf}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Data de Vacinação:</label>
-                <input type="date" name="dataVacina" value={formVacina.dataVacina} onChange={handleInputChangeVacina} style={styles.input} />
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Vacina:</label>
-                <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
-              </div>
-              <div style={styles.modalActions}>
-                <button style={styles.btnPrimary} onClick={handleSaveVacina}>Adicionar Vacina</button>
-                <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
-              </div>
-            </div>
-          </div>
-        )}
+      {showModalVacina && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={styles.cardTitle}>Adicionar Nova Vacina</h3>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Paciente:</label>
+              <select
+                name="pacienteId"
+                value={formVacina.pacienteId}
+                onChange={handleInputChangeVacina}
+                style={styles.input}
+              >
+                <option value="">Selecione um paciente</option>
+                {pacientes.map((paciente) => (
+                  <option key={paciente.id} value={paciente.id}>
+                    {paciente.nome} — {paciente.cpf}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Data de Vacinação:</label>
+              <input type="date" name="dataVacina" value={formVacina.dataVacina} onChange={handleInputChangeVacina} style={styles.input} />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Vacina:</label>
+              <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
+            </div>
+            <div style={styles.modalActions}>
+              <button style={styles.btnPrimary} onClick={handleSaveVacina}>Adicionar Vacina</button>
+              <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL DE DETALHES DA CARTEIRINHA DE VACINAÇÃO --- */}
+      {showModalDetalhesVacinas && pacienteEmDetalhe && (
+        <div style={styles.modalOverlay}>
+          <div style={{...styles.modalContent, maxWidth: '600px'}}> {/* Ajuste de largura */}
+            <h3 style={styles.cardTitle}>Carteirinha de: {pacienteEmDetalhe.nome}</h3>
+            <p style={{marginBottom: '20px', fontSize: '0.9em', color: '#666'}}>
+              Total de Vacinas Registradas: <strong>{pacienteEmDetalhe.totalVacinas}</strong>
+            </p>
+
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Vacina</th>
+                  <th style={styles.th}>Data de Vacinação</th>
+                  <th style={styles.th}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pacienteEmDetalhe.detalhes.map((vacina) => (
+                  <tr key={vacina.idVac}>
+                    <td style={styles.td}>{vacina.vacina}</td>
+                    <td style={styles.td}>{vacina.data}</td>
+                    <td style={styles.td}>
+                      <div style={styles.actionsCell}>
+                        {/* Funções de Editar/Excluir (implementar) */}
+                        <button style={styles.btnIcon} onClick={() => alert(`Editar Vacina ${vacina.idVac}`)}>✏️ Editar</button>
+                        <button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => alert(`Excluir Vacina ${vacina.idVac}`)}>🗑️ Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={styles.modalActions}>
+              <button style={styles.btnSecondary} onClick={() => setShowModalDetalhesVacinas(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     );
@@ -669,8 +766,10 @@ const styles = {
     transition: 'background 0.3s',
   },  
   navItemActive: {
-    backgroundColor: '#e0e0e0', 
+    backgroundColor: '#b6e7ea', 
     fontWeight: 'bold',
+    border: '1px solid #b6e7ea',
+    borderRadius: '12px',
   },
   main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
