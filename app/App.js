@@ -1,21 +1,21 @@
 import { signOut } from "firebase/auth";
 import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   auth,
-  db ,
+  db,
   funcionariosCollection,
   medicosCollection,
-  pacientesCollection
+  pacientesCollection,
+  vacinasCollection
 } from './firebaseConfig';
-import Login from "./index.jsx"; 
-// Importar o restante das coleções (Pacientes, Médicos, etc.) no seu firebaseConfig.js
-// é crucial para o código abaixo funcionar.
+import Login from "./index.jsx";
+
 
 function App() {
   const sair = () => {
     signOut(auth).then(() => {
-      window.location.reload(); // volta pra tela de login
+      window.location.reload(); 
     });
   };
 
@@ -26,15 +26,10 @@ function App() {
     { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
   ]);
   const [medicos, setMedicos] = useState([]);
-  
-  // ESTADOS PARA FUNCIONÁRIOS
+  const [vacinas, setVacinas] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
-  const [showModalFuncionario, setShowModalFuncionario] = useState(false);
-  const [formFuncionario, setFormFuncionario] = useState({ nome: '', email: '', senha: '' });
-
-
+  
   const [especialidades, setEspecialidades] = useState([]);
-  const [vacinas, setVacinas] = useState([{ id: 1, paciente: "João Silva", vacinas: 2 }]);
 
   const dadosRelatorio = {
     consultasPorMes: [{ mes: 'Setembro', total: 250 }, { mes: 'Outubro', total: 210 }],
@@ -43,10 +38,18 @@ function App() {
 
   const [showModalPaciente, setShowModalPaciente] = useState(false);
   const [showModalMedico, setShowModalMedico] = useState(false);
+  const [showModalVacina, setShowModalVacina] = useState(false);
+  const [showModalFuncionario, setShowModalFuncionario] = useState(false);
+
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
+  const [formVacina, setFormVacina] = useState({ pacienteId: '', dataVacina: '', vacina: '' });
+  const [formFuncionario, setFormFuncionario] = useState({ nome: '', email: '', senha: '' });
+  
+  useEffect(() => {
+  document.title = "Clínica Médica"; 
+}, []);
 
-  // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
   const handleEdit = (id, tipo) => {
     alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
@@ -72,6 +75,10 @@ function App() {
     const { name, value } = event.target;
     setFormFuncionario(prevForm => ({ ...prevForm, [name]: value }));
   };
+  const handleInputChangeVacina = (event) => {
+        const { name, value } = event.target;
+        setFormVacina(prevForm => ({ ...prevForm, [name]: value }));
+    };
 
   
   // USE EFFECT PARA CARREGAR PACIENTES
@@ -128,20 +135,18 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // USE EFFECT PARA CARREGAR FUNCIONÁRIOS (DO FIRESTORE)
-  useEffect(() => {
+  // USE EFFECT PARA CARREGAR FUNCIONÁRIOS 
+   useEffect(() => {
     const q = query(funcionariosCollection, orderBy("nome", "asc"));
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const funcionariosData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setFuncionarios(funcionariosData);
     }, (error) => {
-      console.error("Erro ao carregar funcionários: ", error);
+      console.error("Erro ao carregar funcionarios: ", error);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -243,6 +248,35 @@ function App() {
     }
   };
 
+  const handleSaveVacina = async () => {
+    if (!formVacina.pacienteId || !formVacina.dataVacina || !formVacina.vacina) {
+            alert("Por favor, selecione o Paciente, a Data e o nome da Vacina.");
+            return;
+        }
+
+        // Busca o nome do paciente para salvar no registro
+        const pacienteSelecionado = pacientes.find(p => p.id === formVacina.pacienteId);
+        const nomePaciente = pacienteSelecionado ? pacienteSelecionado.nome : 'Paciente Desconhecido';
+        
+        try {
+            // 🚨 ATENÇÃO: Usei 'agendamentosCollection' como PLACEHOLDER. 
+            // Você deve importar e usar a coleção correta para Vacinas (Ex: 'vacinasCollection').
+            await addDoc(vacinasCollection, { 
+                pacienteId: formVacina.pacienteId,
+                dataVacina: formVacina.dataVacina, 
+                vacina: formVacina.vacina,
+                dataRegistro: new Date().toISOString(), 
+            });
+
+            alert(`Vacina "${formVacina.vacina}" registrada para ${nomePaciente} com sucesso!`);
+            setFormVacina({ pacienteId: '', dataVacina: '', vacina: '' });
+            setShowModalVacina(false);
+            
+        } catch (error) {
+            console.error("ERRO ao registrar vacina:", error);
+            alert("ERRO ao registrar vacina. Verifique o console (F12)!");
+        }
+    }
 
   // --- RENDERIZAÇÃO DAS PÁGINAS ---
   const renderPage = () => {
@@ -351,27 +385,51 @@ function App() {
         );
 
       case "Carteirinha":
-        return (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>Carteirinha de Vacinação</h3>
-            <table style={styles.table}>
-              <thead><tr><th style={styles.th}>Paciente</th><th style={styles.th}>Vacinas</th><th style={styles.th}>Ações</th></tr></thead>
-              <tbody>
-                {vacinas.map((item) => (
-                  <tr key={item.id}>
-                    <td style={styles.td}>{item.paciente}</td>
-                    <td style={styles.td}>{item.vacinas}</td>
-                    <td style={styles.td}>
-                      <div style={styles.actionsCell}> 
-                        <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Carteirinha')}>👁️ Ver</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+          return (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Carteirinha de Vacinação</h3>
+              <button style={styles.btnPrimary} onClick={() => setShowModalVacina(true)}>+ Adicionar Vacina</button>
+              <table style={styles.table}>
+                <thead><tr><th style={styles.th}>Paciente</th><th style={styles.th}>Vacinas</th><th style={styles.th}>Ações</th></tr></thead>
+                <tbody>
+                  {vacinas.map((item) => (
+                    <tr key={item.id}>
+                      <td style={styles.td}>{item.paciente}</td>
+                      <td style={styles.td}>{item.vacinas}</td>
+                      <td style={styles.td}>
+                        <div style={styles.actionsCell}> {/* Envolve botões para alinhamento */}
+                          <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Carteirinha')}>👁️ Ver</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+
+        case "Relatórios":
+          return (
+            <section>
+              <div style={styles.card}><h3 style={styles.cardTitle}>Relatórios Gerenciais</h3></div>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px'}}> {/* Ajuste no grid */}
+                <div style={styles.card}>
+                  <h4 style={styles.cardTitle}>Consultas por Mês</h4>
+                  <table style={styles.table}>
+                    <thead><tr><th style={styles.th}>Mês</th><th style={styles.th}>Total</th></tr></thead>
+                    <tbody>{dadosRelatorio.consultasPorMes.map((item, i) => (<tr key={i}><td style={styles.td}>{item.mes}</td><td style={styles.td}>{item.total}</td></tr>))}</tbody>
+                  </table>
+                </div>
+                <div style={styles.card}>
+                  <h4 style={styles.cardTitle}>Faturamento por Convênio</h4>
+                  <table style={styles.table}>
+                    <thead><tr><th style={styles.th}>Convênio</th><th style={styles.th}>Valor</th></tr></thead>
+                    <tbody>{dadosRelatorio.faturamentoPorConvenio.map((item, i) => (<tr key={i}><td style={styles.td}>{item.convenio}</td><td style={styles.td}>{item.valor}</td></tr>))}</tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          );
         
       // CASE PARA FUNCIONÁRIOS
       case "Funcionários":
@@ -460,8 +518,6 @@ if (!user) {
       </aside>
       <main style={styles.main}>
         <header style={styles.topbar}>
-          <input style={styles.searchInput} placeholder="Pesquisar..." />
-          {/* Adicionar botão de Logout aqui, se necessário */}
         </header>
         <section style={styles.content}>{renderPage()}</section>
       </main>
@@ -554,17 +610,66 @@ if (!user) {
         </div>
       )}
 
-    </div>
-  );
-}
+      {/* --- MODAL DE NOVA VACINA --- */}
+        {showModalVacina && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+              <h3 style={styles.cardTitle}>Adicionar Nova Vacina</h3>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Paciente:</label>
+                <select
+                  name="pacienteId"
+                  value={formVacina.pacienteId}
+                  onChange={handleInputChangeVacina}
+                  style={styles.input}
+                >
+                  <option value="">Selecione um paciente</option>
+                  {pacientes.map((paciente) => (
+                    <option key={paciente.id} value={paciente.id}>
+                      {paciente.nome} — {paciente.cpf}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Data de Vacinação:</label>
+                <input type="date" name="dataVacina" value={formVacina.dataVacina} onChange={handleInputChangeVacina} style={styles.input} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Vacina:</label>
+                <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
+              </div>
+              <div style={styles.modalActions}>
+                <button style={styles.btnPrimary} onClick={handleSaveVacina}>Adicionar Vacina</button>
+                <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
+              </div>
+            </div>
+          </div>
+        )}
 
+      </div>
+    );
+  }
 const styles = {
   app: { display: 'flex', fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', backgroundColor: '#f4f7f8', minHeight: '100vh' },
   sidebar: { width: '240px', backgroundColor: '#eaf9f9', padding: '20px 10px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', flexShrink: 0 },
   logo: { fontSize: '24px', fontWeight: '700', color: '#2b9aa3' },
-  navItem: { width: '100%', padding: '12px 15px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '15px', fontWeight: '500', borderRadius: '8px', cursor: 'pointer', marginBottom: '5px', color: '#333' },
-  navItemActive: { backgroundColor: '#2b9aa3', color: 'white' },
-  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
+  navItem: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#333',
+    padding: '12px 18px',
+    textAlign: 'left',
+    width: '100%',
+    cursor: 'pointer',
+    fontSize: '15px',
+    transition: 'background 0.3s',
+  },  
+  navItemActive: {
+    backgroundColor: '#e0e0e0',
+    fontWeight: 'bold',
+  },  
+  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
   searchInput: { width: '350px', padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
   content: { padding: '25px', flexGrow: 1, overflowY: 'auto' },
@@ -629,4 +734,3 @@ const styles = {
 };
 
 export default App;
-
