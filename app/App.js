@@ -1,6 +1,6 @@
-import { signOut, createUserWithEmailAndPassword } from 'firebase/auth'; 
-import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import { signOut } from "firebase/auth";
+import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import {
   auth,
   db,
@@ -77,6 +77,11 @@ function App() {
         const { name, value } = event.target;
         setFormVacina(prevForm => ({ ...prevForm, [name]: value }));
     };
+  
+  useEffect(() => {
+    document.title = "Clínica Médica"; 
+  }, []);
+
 
   
   // USE EFFECT PARA CARREGAR PACIENTES
@@ -537,8 +542,6 @@ if (!user) {
       </aside>
       <main style={styles.main}>
         <header style={styles.topbar}>
-          <input style={styles.searchInput} placeholder="Pesquisar..." />
-          {/* Adicionar botão de Logout aqui, se necessário */}
         </header>
         <section style={styles.content}>{renderPage()}</section>
       </main>
@@ -675,8 +678,21 @@ const styles = {
   app: { display: 'flex', fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', backgroundColor: '#f4f7f8', minHeight: '100vh' },
   sidebar: { width: '240px', backgroundColor: '#eaf9f9', padding: '20px 10px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', flexShrink: 0 },
   logo: { fontSize: '24px', fontWeight: '700', color: '#2b9aa3' },
-  navItem: { width: '100%', padding: '12px 15px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '15px', fontWeight: '500', borderRadius: '8px', cursor: 'pointer', marginBottom: '5px', color: '#333' },
-  navItemActive: { backgroundColor: '#2b9aa3', color: 'white' },
+  navItem: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#333',
+    padding: '12px 18px',
+    textAlign: 'left',
+    width: '100%',
+    cursor: 'pointer',
+    fontSize: '15px',
+    transition: 'background 0.3s',
+  },  
+  navItemActive: {
+    backgroundColor: '#e0e0e0', 
+    fontWeight: 'bold',
+  },
   main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
   searchInput: { width: '350px', padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
@@ -742,4 +758,3 @@ const styles = {
 };
 
 export default App;
-
