@@ -26,11 +26,11 @@ export default function Login({ onLoginSuccess }) {
   }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.pageWrapper}>
       <div style={styles.card}>
         <h2 style={styles.title}>Login do Sistema</h2>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} style={styles.form}>
           <input
             type="email"
             placeholder="Email"
@@ -58,29 +58,36 @@ export default function Login({ onLoginSuccess }) {
   );
 }
 
-// 🎨 Estilos padronizados (iguais ao resto das páginas)
 const styles = {
-  container: {
+  pageWrapper: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100vh",
+    minHeight: "100vh",
     backgroundColor: "#f5f6fa",
     fontFamily: "Arial, sans-serif",
+    margin: 0,
+    padding: 0,
   },
   card: {
     backgroundColor: "#fff",
-    padding: "40px 50px",
+    padding: "40px",
     borderRadius: "16px",
-    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
     width: "360px",
     textAlign: "center",
+    boxSizing: "border-box", // garante que o padding não aumente a largura
   },
   title: {
-    marginBottom: "30px",
+    marginBottom: "28px",
     fontSize: "24px",
     color: "#333",
     fontWeight: "bold",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch", // alinha 100% inputs e botão
   },
   input: {
     width: "100%",
@@ -91,6 +98,7 @@ const styles = {
     fontSize: "15px",
     outline: "none",
     transition: "border 0.3s",
+    boxSizing: "border-box", // evita desalinhamento horizontal
   },
   button: {
     width: "100%",
@@ -103,6 +111,9 @@ const styles = {
     fontSize: "16px",
     fontWeight: "bold",
     transition: "background-color 0.3s",
+  },
+  buttonHover: {
+    backgroundColor: "#0069d9",
   },
   error: {
     marginTop: "15px",
