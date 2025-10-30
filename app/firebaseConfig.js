@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; 
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDHSB2vlJtX0q2lby1xil8tYIy0Ytu75cQ",
@@ -16,7 +16,9 @@ const app = initializeApp(firebaseConfig);
 console.log("Firebase App Initialized successfully!");
 
 export const db = getFirestore(app);
-export const auth = getAuth(app); 
+export const auth = getAuth(app);
+
 export const pacientesCollection = collection(db, "pacientes");
 export const medicosCollection = collection(db, "medicos");
 export const agendamentosCollection = collection(db, "agendamentos");
+export const funcionariosCollection = collection(db, 'funcionarios');
