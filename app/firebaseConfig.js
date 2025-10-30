@@ -18,3 +18,4 @@ export const db = getFirestore(app);
 export const pacientesCollection = collection(db, "pacientes");
 export const medicosCollection = collection(db, "medicos");
 export const agendamentosCollection = collection(db, "agendamentos");
+export const vacinasCollection = collection(db, "vacinas");
