@@ -46,6 +46,8 @@ function App() {
   const [showModalDetalhesVacinas, setShowModalDetalhesVacinas] = useState(false);
   const [pacienteEmDetalhe, setPacienteEmDetalhe] = useState(null);
   const [medicoEmEdicao, setMedicoEmEdicao] = useState(null);
+  const [vacinaEmEdicao, setVacinaEmEdicao] = useState(null);
+
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
@@ -407,33 +409,68 @@ const handleSaveFuncionario = async () => {
 
   const handleSaveVacina = async () => {
     if (!formVacina.pacienteId || !formVacina.dataVacina || !formVacina.vacina) {
-            alert("Por favor, selecione o Paciente, a Data e o nome da Vacina.");
-            return;
-        }
-
-        // Busca o nome do paciente para salvar no registro
-        const pacienteSelecionado = pacientes.find(p => p.id === formVacina.pacienteId);
-        const nomePaciente = pacienteSelecionado ? pacienteSelecionado.nome : 'Paciente Desconhecido';
-        
-        try {
-            // 🚨 ATENÇÃO: Usei 'agendamentosCollection' como PLACEHOLDER. 
-            // Você deve importar e usar a coleção correta para Vacinas (Ex: 'vacinasCollection').
-            await addDoc(vacinasCollection, { 
-                pacienteId: formVacina.pacienteId,
-                dataVacina: formVacina.dataVacina, 
-                vacina: formVacina.vacina,
-                dataRegistro: new Date().toISOString(), 
-            });
-
-            alert(`Vacina "${formVacina.vacina}" registrada para ${nomePaciente} com sucesso!`);
-            setFormVacina({ pacienteId: '', dataVacina: '', vacina: '' });
-            setShowModalVacina(false);
-            
-        } catch (error) {
-            console.error("ERRO ao registrar vacina:", error);
-            alert("ERRO ao registrar vacina. Verifique o console (F12)!");
-        }
+      alert("Por favor, selecione o Paciente, a Data e o nome da Vacina.");
+      return;
     }
+
+    try {
+      if (vacinaEmEdicao) {
+        // Modo edição
+        const vacinaRef = doc(db, 'vacinas', vacinaEmEdicao.id);
+        await updateDoc(vacinaRef, {
+          pacienteId: formVacina.pacienteId,
+          dataVacina: formVacina.dataVacina,
+          vacina: formVacina.vacina,
+          dataAtualizacao: new Date().toISOString(),
+        });
+        alert(`Vacina "${formVacina.vacina}" atualizada com sucesso!`);
+      } else {
+        // Novo cadastro
+        await addDoc(vacinasCollection, {
+          pacienteId: formVacina.pacienteId,
+          dataVacina: formVacina.dataVacina,
+          vacina: formVacina.vacina,
+          dataRegistro: new Date().toISOString(),
+        });
+        alert(`Vacina "${formVacina.vacina}" registrada com sucesso!`);
+      }
+
+      // Limpa tudo e fecha modal
+      setFormVacina({ pacienteId: '', dataVacina: '', vacina: '' });
+      setVacinaEmEdicao(null);
+      setShowModalVacina(false);
+
+    } catch (error) {
+      console.error("ERRO ao salvar/atualizar vacina:", error);
+      alert("Erro ao salvar ou atualizar vacina. Veja o console (F12).");
+    }
+  };
+
+
+    // Quando o usuário clicar em "Editar"
+  const handleEditVacina = (vacina) => {
+    setVacinaEmEdicao(vacina); // guarda a vacina que será editada
+    setFormVacina({
+      pacienteId: vacina.pacienteId,
+      dataVacina: vacina.dataVacina,
+      vacina: vacina.vacina
+    });
+    setShowModalVacina(true); // abre o modal
+  };
+
+  const handleDeleteVacina = async (vacinaId, vacinaNome) => {
+    if (window.confirm(`Tem certeza que deseja excluir a vacina "${vacinaNome}"?`)) {
+      try {
+        await deleteDoc(doc(db, 'vacinas', vacinaId));
+        alert(`Vacina "${vacinaNome}" excluída com sucesso!`);
+        // Atualiza a lista local após exclusão
+        setVacinas((prev) => prev.filter(v => v.id !== vacinaId));
+      } catch (error) {
+        console.error("Erro ao excluir vacina:", error);
+        alert("Erro ao excluir vacina. Verifique o console (F12).");
+      }
+    }
+  };
 
   // --- RENDERIZAÇÃO DAS PÁGINAS ---
   const renderPage = () => {
@@ -821,7 +858,7 @@ if (!user) {
               <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
             </div>
             <div style={styles.modalActions}>
-              <button style={styles.btnPrimary} onClick={handleSaveVacina}>Adicionar Vacina</button>
+              <button style={styles.btnPrimary} onClick={handleSaveVacina}>Confirmar Vacina</button>
               <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
             </div>
           </div>
@@ -853,8 +890,27 @@ if (!user) {
                     <td style={styles.td}>
                       <div style={styles.actionsCell}>
                         {/* Funções de Editar/Excluir (implementar) */}
-                        <button style={styles.btnIcon} onClick={() => alert(`Editar Vacina ${vacina.idVac}`)}>✏️ Editar</button>
-                        <button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => alert(`Excluir Vacina ${vacina.idVac}`)}>🗑️ Excluir</button>
+                        <button
+                          style={styles.btnIcon}
+                          onClick={() => {
+                            const vacinaObj = vacinas.find(item => item.id === vacina.idVac);
+                            if (vacinaObj) {
+                              handleEditVacina(vacinaObj);
+                              setShowModalDetalhesVacinas(false); // fecha a carteirinha ao abrir a edição
+                            } else {
+                              alert("Não foi possível carregar os dados completos da vacina.");
+                            }
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                        style={{ ...styles.btnIcon, color: '#e57373' }}
+                        onClick={() => handleDeleteVacina(vacina.idVac, vacina.vacina)}
+                      >
+                        🗑️ Excluir
+                      </button>
+
                       </div>
                     </td>
                   </tr>
