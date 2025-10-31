@@ -347,45 +347,56 @@ function App() {
 
   // --- FUNÇÃO DE SALVAR FUNCIONÁRIOS ---
 
+// --- FUNÇÃO DE SALVAR OU ATUALIZAR FUNCIONÁRIOS (CORRIGIDA) ---
 const handleSaveFuncionario = async () => {
-  try {
-    if (!formFuncionario.nome || !formFuncionario.email || !formFuncionario.senha) {
-      alert("Preencha todos os campos!");
-      return;
-    }
+  try {
+    if (!formFuncionario.nome || !formFuncionario.email || !formFuncionario.senha) {
+      alert("Preencha todos os campos!");
+      return;
+    }
 
-    if (formFuncionario.senha.length < 6) {
-      alert("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    if (formFuncionario.senha.length < 6) {
+      alert("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
 
-    if (!/\S+@\S+\.\S+/.test(formFuncionario.email)) {
-      alert("Por favor, insira um email válido.");
-      return;
-    }
+    if (!/\S+@\S+\.\S+/.test(formFuncionario.email)) {
+      alert("Por favor, insira um email válido.");
+      return;
+    }
+    
+    // Dados base a serem salvos/atualizados
+    const dadosFuncionario = {
+        nome: formFuncionario.nome,
+        email: formFuncionario.email,
+        senha: formFuncionario.senha, // Atenção: Senhas devem ser tratadas com segurança (hash) em produção!
+    };
 
-    if (funcionarioEmEdicao) {
-      const ref = doc(db, "funcionarios", funcionarioEmEdicao.id);
-      await updateDoc(ref, formFuncionario);
-      setFuncionarios((prev) =>
-        prev.map((f) =>
-          f.id === funcionarioEmEdicao.id ? { ...f, ...formFuncionario } : f
-        )
-      );
-      alert("Funcionário atualizado!");
-    } else {
-      const ref = collection(db, "funcionarios");
-      const novo = await addDoc(ref, formFuncionario);
-      alert("Funcionário cadastrado!");
-    }
 
-    setShowModalFuncionario(false);
-    setFuncionarioEmEdicao(null);
-    setFormFuncionario({ nome: "", email: "", senha: "" });
-  } catch (error) {
-    console.error("Erro ao salvar funcionário:", error);
-    alert("Erro ao salvar funcionário. Veja o console.");
-  }
+    if (funcionarioEmEdicao) {
+      // MODO EDIÇÃO: ATUALIZA O DOCUMENTO EXISTENTE
+      const ref = doc(db, "funcionarios", funcionarioEmEdicao.id);
+      await updateDoc(ref, {
+        ...dadosFuncionario,
+        dataAtualizacao: new Date().toISOString(), // Adiciona data de atualização
+      });
+      alert(`Funcionário "${formFuncionario.nome}" atualizado!`);
+    } else {
+      // MODO NOVO CADASTRO: CRIA UM NOVO DOCUMENTO
+      await addDoc(funcionariosCollection, { // Usamos a collection já importada
+          ...dadosFuncionario,
+          dataCadastro: new Date().toISOString(), // <--- ADICIONADO: DATA DE CADASTRO!
+      });
+      alert(`Funcionário "${formFuncionario.nome}" cadastrado!`);
+    }
+
+    setShowModalFuncionario(false);
+    setFuncionarioEmEdicao(null);
+    setFormFuncionario({ nome: "", email: "", senha: "" });
+  } catch (error) {
+    console.error("Erro ao salvar funcionário:", error);
+    alert("Erro ao salvar funcionário. Veja o console.");
+  }
 };
 
   // FUNÇÃO PARA EXCLUIR FUNCIONÁRIO DO FIRESTORE
@@ -778,65 +789,66 @@ if (!user) {
 
       {/* MODAL DE NOVO FUNCIONÁRIO */}
       {showModalFuncionario && (
-      <div style={styles.modalOverlay}>
-        <div style={styles.modalContent}>
-          <h3 style={styles.cardTitle}>
-            {funcionarioEmEdicao ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
-          </h3>
+      <div style={styles.modalOverlay}>
+        <div style={styles.modalContent}>
+          <h3 style={styles.cardTitle}>
+            {funcionarioEmEdicao ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
+          </h3>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Nome:</label>
+            <input
+              type="text"
+              name="nome"
+              value={formFuncionario.nome}
+              onChange={handleInputChangeFuncionario}
+              style={styles.input}
+            />
+          </div>
 
           <div style={styles.formGroup}>
-            <label>Nome:</label>
-            <input
-              type="text"
-              value={formFuncionario.nome}
-              onChange={(e) =>
-                setFormFuncionario({ ...formFuncionario, nome: e.target.value })
-              }
-              style={styles.input}
-            />
-          </div>
-
+            <label style={styles.label}>Email:</label>
+            <input
+              type="email"
+              name="email"
+              value={formFuncionario.email}
+              onChange={handleInputChangeFuncionario}
+              style={styles.input}
+              placeholder="email@clinica.com"
+            />
+          </div>
+          
           <div style={styles.formGroup}>
-            <label>Email:</label>
-            <input
-              type="email"
-              value={formFuncionario.email}
-              onChange={(e) =>
-                setFormFuncionario({ ...formFuncionario, email: e.target.value })
-              }
-              style={styles.input}
-            />
-          </div>
+            <label style={styles.label}>Senha:</label>
+            <input
+              type="password"
+              name="senha"
+              value={formFuncionario.senha}
+              onChange={handleInputChangeFuncionario}
+              style={styles.input}
+              placeholder={funcionarioEmEdicao ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"}
+            />
+          </div>
 
-          <div style={styles.formGroup}>
-            <label>Senha:</label>
-            <input
-              type="password"
-              value={formFuncionario.senha}
-              onChange={(e) =>
-                setFormFuncionario({ ...formFuncionario, senha: e.target.value })
-              }
-              style={styles.input}
-            />
-          </div>
 
-          <div style={styles.modalActions}>
-            <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>
-              {funcionarioEmEdicao ? "Salvar Alterações" : "Cadastrar"}
+          <div style={styles.modalActions}>
+            <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>
+                {funcionarioEmEdicao ? "Atualizar Funcionário" : "Salvar Funcionário"}
             </button>
-            <button
-              style={styles.btnSecondary}
-              onClick={() => {
-                setShowModalFuncionario(false);
-                setFuncionarioEmEdicao(null);
-              }}
+            <button 
+                style={styles.btnSecondary} 
+                onClick={() => {
+                    setShowModalFuncionario(false);
+                    setFuncionarioEmEdicao(null);
+                    setFormFuncionario({ nome: "", email: "", senha: "" });
+                }}
             >
-              Cancelar
+                Cancelar
             </button>
-          </div>
-        </div>
-      </div>
-    )}
+          </div>
+        </div>
+      </div>
+      )}
 
 
       {/* --- MODAL DE NOVA VACINA --- */}
