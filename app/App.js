@@ -1,5 +1,5 @@
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
-import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, setDoc } from 'firebase/firestore';
+import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, setDoc, collection} from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
   auth,
@@ -47,6 +47,7 @@ function App() {
   const [pacienteEmDetalhe, setPacienteEmDetalhe] = useState(null);
   const [medicoEmEdicao, setMedicoEmEdicao] = useState(null);
   const [vacinaEmEdicao, setVacinaEmEdicao] = useState(null);
+  const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState(null);
 
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
@@ -237,6 +238,16 @@ function App() {
     
   }, [pacientes, vacinas]);
 
+  const handleEditFuncionario = (funcionario) => {
+    setFuncionarioEmEdicao(funcionario);
+    setFormFuncionario({
+      nome: funcionario.nome || "",
+      email: funcionario.email || "",
+      senha: funcionario.senha || "",
+    });
+    setShowModalFuncionario(true);
+  };
+
     // 1. NOVA FUNÇÃO: DELETAR MÉDICO
   const handleDeleteMedico = async (medicoId, medicoNome) => {
     if (window.confirm(`Tem certeza que deseja EXCLUIR o(a) médico(a) ${medicoNome}?`)) {
@@ -337,54 +348,43 @@ function App() {
   // --- FUNÇÃO DE SALVAR FUNCIONÁRIOS ---
 
 const handleSaveFuncionario = async () => {
-  const { nome, email, senha } = formFuncionario;
-
-  if (!nome || !email || !senha) {
-    alert("Por favor, preencha Nome, Email e Senha.");
-    return;
-  }
-
   try {
-    // 1. CRIAR A CONTA DE LOGIN NO FIREBASE AUTH
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      senha
-    );
-    const uid = userCredential.user.uid;
-
-    // 2. SALVAR DADOS DE PERFIL NO FIRESTORE (como você faz com Pacientes, mas usando setDoc)
-    // Usamos setDoc com o UID como ID do documento, para ligar a conta Auth ao perfil.
-    const funcionarioRef = doc(funcionariosCollection, uid);
-
-    await setDoc(funcionarioRef, {
-      nome: nome,
-      email: email,
-      cargo: "Administrativo", 
-      dataCadastro: new Date().toISOString(),
-    });
-
-    alert(`Funcionário "${nome}" e conta de login criados com sucesso!`);
-    
-    // Limpar o formulário e fechar o modal
-    setFormFuncionario({ nome: "", email: "", senha: "" });
-    setShowModalFuncionario(false);
-
-  } catch (error) {
-    console.error(
-      "ERRO ao cadastrar funcionário. Código: ",
-      error.code,
-      error.message
-    );
-    
-    let mensagemErro = "ERRO ao salvar funcionário. Verifique o console (F12)!";
-    if (error.code === 'auth/email-already-in-use') {
-        mensagemErro = "O e-mail fornecido já está em uso por outra conta.";
-    } else if (error.code === 'auth/weak-password') {
-        mensagemErro = "A senha deve ter pelo menos 6 caracteres.";
+    if (!formFuncionario.nome || !formFuncionario.email || !formFuncionario.senha) {
+      alert("Preencha todos os campos!");
+      return;
     }
 
-    alert(mensagemErro);
+    if (formFuncionario.senha.length < 6) {
+      alert("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formFuncionario.email)) {
+      alert("Por favor, insira um email válido.");
+      return;
+    }
+
+    if (funcionarioEmEdicao) {
+      const ref = doc(db, "funcionarios", funcionarioEmEdicao.id);
+      await updateDoc(ref, formFuncionario);
+      setFuncionarios((prev) =>
+        prev.map((f) =>
+          f.id === funcionarioEmEdicao.id ? { ...f, ...formFuncionario } : f
+        )
+      );
+      alert("Funcionário atualizado!");
+    } else {
+      const ref = collection(db, "funcionarios");
+      const novo = await addDoc(ref, formFuncionario);
+      alert("Funcionário cadastrado!");
+    }
+
+    setShowModalFuncionario(false);
+    setFuncionarioEmEdicao(null);
+    setFormFuncionario({ nome: "", email: "", senha: "" });
+  } catch (error) {
+    console.error("Erro ao salvar funcionário:", error);
+    alert("Erro ao salvar funcionário. Veja o console.");
   }
 };
 
@@ -652,7 +652,7 @@ const handleSaveFuncionario = async () => {
                     <td style={styles.td}>{new Date(item.dataCadastro).toLocaleDateString()}</td>
                     <td style={styles.td}>
                       <div style={styles.actionsCell}>
-                        <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Funcionários')}>✏️ Editar</button>
+                        <button style={styles.btnIcon} onClick={() => handleEditFuncionario(item)}>✏️ Editar</button>
                         <button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => handleDeleteFuncionario(item.id, item.email)}>🗑️ Excluir</button>
                       </div>
                     </td>
@@ -776,57 +776,68 @@ if (!user) {
     </div>
 )}
 
-
       {/* MODAL DE NOVO FUNCIONÁRIO */}
       {showModalFuncionario && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={styles.cardTitle}>Cadastrar Novo Funcionário (Usuário de Acesso)</h3>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Nome Completo:</label>
-              <input 
-                type="text" 
-                name="nome" 
-                value={formFuncionario.nome} 
-                onChange={handleInputChangeFuncionario} 
-                style={styles.input} 
-                required
-              />
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Email (Login):</label>
-              <input 
-                type="email" 
-                name="email" 
-                value={formFuncionario.email} 
-                onChange={handleInputChangeFuncionario} 
-                style={styles.input} 
-                required
-              />
-            </div>
+      <div style={styles.modalOverlay}>
+        <div style={styles.modalContent}>
+          <h3 style={styles.cardTitle}>
+            {funcionarioEmEdicao ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
+          </h3>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Senha (mínimo 6 caracteres):</label>
-              <input 
-                type="password" 
-                name="senha" 
-                value={formFuncionario.senha} 
-                onChange={handleInputChangeFuncionario} 
-                style={styles.input} 
-                required
-                minLength="6"
-              />
-            </div>
-            
-            <div style={styles.modalActions}>
-              <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>Cadastrar</button>
-              <button style={styles.btnSecondary} onClick={() => setShowModalFuncionario(false)}>Cancelar</button>
-            </div>
+          <div style={styles.formGroup}>
+            <label>Nome:</label>
+            <input
+              type="text"
+              value={formFuncionario.nome}
+              onChange={(e) =>
+                setFormFuncionario({ ...formFuncionario, nome: e.target.value })
+              }
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.formGroup}>
+            <label>Email:</label>
+            <input
+              type="email"
+              value={formFuncionario.email}
+              onChange={(e) =>
+                setFormFuncionario({ ...formFuncionario, email: e.target.value })
+              }
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.formGroup}>
+            <label>Senha:</label>
+            <input
+              type="password"
+              value={formFuncionario.senha}
+              onChange={(e) =>
+                setFormFuncionario({ ...formFuncionario, senha: e.target.value })
+              }
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.modalActions}>
+            <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>
+              {funcionarioEmEdicao ? "Salvar Alterações" : "Cadastrar"}
+            </button>
+            <button
+              style={styles.btnSecondary}
+              onClick={() => {
+                setShowModalFuncionario(false);
+                setFuncionarioEmEdicao(null);
+              }}
+            >
+              Cancelar
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    )}
+
 
       {/* --- MODAL DE NOVA VACINA --- */}
       {showModalVacina && (
