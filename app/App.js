@@ -1,5 +1,5 @@
-import { signOut } from "firebase/auth";
-import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
+import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
   auth,
@@ -45,6 +45,7 @@ function App() {
   const [showModalFuncionario, setShowModalFuncionario] = useState(false);
   const [showModalDetalhesVacinas, setShowModalDetalhesVacinas] = useState(false);
   const [pacienteEmDetalhe, setPacienteEmDetalhe] = useState(null);
+  const [medicoEmEdicao, setMedicoEmEdicao] = useState(null);
 
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
   const [formMedico, setFormMedico] = useState({ nome: '', especialidade: '', horario: '', imagem: '' });
@@ -54,8 +55,21 @@ function App() {
   // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
   const handleEdit = (id, tipo) => {
-    alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
-  };
+    // alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`); // Linha original
+
+    if (tipo === 'Médicos') {
+        // Encontra o objeto médico completo pelo ID
+        const medicoParaEditar = medicos.find(m => m.id === id); 
+        if (medicoParaEditar) {
+            handleEditMedico(medicoParaEditar); // Chama a função específica de edição
+        } else {
+            alert("Médico não encontrado para edição.");
+        }
+    } else {
+        // Implementar lógica para outros tipos (Pacientes, Funcionários, etc.)
+        alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
+    }
+  };
 
   const handleDelete = (id, tipo, setter) => {
     if (window.confirm(`Tem certeza que deseja excluir o item ${id} de ${tipo}?`)) {
@@ -221,6 +235,75 @@ function App() {
     
   }, [pacientes, vacinas]);
 
+    // 1. NOVA FUNÇÃO: DELETAR MÉDICO
+  const handleDeleteMedico = async (medicoId, medicoNome) => {
+    if (window.confirm(`Tem certeza que deseja EXCLUIR o(a) médico(a) ${medicoNome}?`)) {
+      try {
+        await deleteDoc(doc(db, 'medicos', medicoId));
+        alert(`Médico(a) ${medicoNome} excluído(a) com sucesso!`);
+      } catch (error) {
+        console.error("Erro ao excluir médico:", error);
+        alert("Erro ao excluir médico. Verifique o console (F12)!");
+      }
+    }
+  };
+
+  // 2. FUNÇÃO: TRATAR EDIÇÃO (PREENCHE O FORMULÁRIO)
+  const handleEditMedico = (medico) => {
+    setMedicoEmEdicao(medico); // Armazena o objeto para saber qual ID atualizar
+    setFormMedico({
+      nome: medico.nome,
+      especialidade: medico.especialidade,
+      horario: medico.horario,
+      imagem: medico.imagem || '',
+    });
+    setShowModalMedico(true); // Abre o modal
+  };
+
+  // 3. FUNÇÃO: SALVAR OU ATUALIZAR MÉDICO
+  const handleSaveOrUpdateMedico = async () => {
+    if (!formMedico.nome || !formMedico.especialidade || !formMedico.horario) {
+      alert("Por favor, preencha Nome, Especialidade e Horário de trabalho.");
+      return;
+    }
+
+    // Dados a serem salvos/atualizados
+    const dadosMedico = {
+      nome: formMedico.nome,
+      especialidade: formMedico.especialidade,
+      horario: formMedico.horario,
+      imagem: formMedico.imagem || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?fit=crop&w=50",
+    };
+
+    try {
+      if (medicoEmEdicao) {
+        // MODO EDIÇÃO: ATUALIZA O DOCUMENTO EXISTENTE
+        const medicoRef = doc(db, 'medicos', medicoEmEdicao.id);
+        await updateDoc(medicoRef, {
+          ...dadosMedico,
+          dataAtualizacao: new Date().toISOString(), // Opcional: registrar data de atualização
+        });
+        alert(`Médico(a) "${formMedico.nome}" atualizado(a) com sucesso!`);
+      } else {
+        // MODO NOVO CADASTRO: CRIA UM NOVO DOCUMENTO
+        await addDoc(medicosCollection, {
+          ...dadosMedico,
+          dataCadastro: new Date().toISOString(),
+        });
+        alert(`Médico(a) "${formMedico.nome}" salvo com sucesso!`);
+      }
+
+      // Limpar estados e fechar modal
+      setFormMedico({ nome: "", especialidade: "", horario: "", imagem: "" });
+      setMedicoEmEdicao(null);
+      setShowModalMedico(false);
+
+    } catch (error) {
+      console.error("ERRO ao salvar/atualizar médico:", error);
+      alert("ERRO ao salvar/atualizar médico. Verifique o console (F12)!");
+    }
+  };
+
   // --- FUNÇÕES DE SALVAR DADOS ---
 
   const handleSavePaciente = async () => { 
@@ -248,29 +331,6 @@ function App() {
     }
   };
 
-  const handleSaveMedico = async () => {
-    if (!formMedico.nome || !formMedico.especialidade || !formMedico.horario) {
-      alert("Por favor, preencha Nome, Especialidade e Horário de trabalho.");
-      return;
-    }
-    try {
-      await addDoc(medicosCollection, {
-        nome: formMedico.nome,
-        especialidade: formMedico.especialidade,
-        horario: formMedico.horario,
-        imagem:
-          formMedico.imagem ||
-          "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?fit=crop&w=50",
-        dataCadastro: new Date().toISOString(),
-      });
-      alert(`Médico(a) "${formMedico.nome}" salvo com sucesso!`);
-      setFormMedico({ nome: "", especialidade: "", horario: "", imagem: "" });
-      setShowModalMedico(false);
-    } catch (error) {
-      console.error("ERRO ao adicionar médico:", error);
-      alert("ERRO ao salvar médico. Verifique o console (F12)!");
-    }
-  };
 
   // --- FUNÇÃO DE SALVAR FUNCIONÁRIOS ---
 
@@ -414,29 +474,52 @@ const handleSaveFuncionario = async () => {
         );
 
       case "Médicos":
-        return (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>Médicos</h3>
-            <button style={styles.btnPrimary} onClick={() => setShowModalMedico(true)}>+ Novo Médico</button>
-            <table style={styles.table}>
-              <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
-              <tbody>
-                {medicos.map(item => (
-                  <tr key={item.id}>
-                    <td style={styles.td}><div style={styles.medicoCell}><img src={item.imagem} alt={item.nome} style={styles.tdImage} />{item.nome}</div></td> 
-                    <td style={styles.td}>{item.especialidade}</td>
-                    <td style={styles.td}>
-                      <div style={styles.actionsCell}> 
-                        <button style={styles.btnIcon} onClick={() => handleEdit(item.id, 'Médicos')}>✏️ Editar</button>
-                        <button style={{...styles.btnIcon, color: '#e57373'}} onClick={() => handleDelete(item.id, 'Médicos', setMedicos)}>🗑️ Excluir</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+        return (
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>Médicos</h3>
+            <button 
+                style={styles.btnPrimary} 
+                onClick={() => {
+                    // Ao clicar em Novo, limpa o estado de edição para garantir novo cadastro
+                    setMedicoEmEdicao(null); 
+                    setFormMedico({ nome: "", especialidade: "", horario: "", imagem: "" });
+                    setShowModalMedico(true);
+                }}
+            >
+                + Novo Médico
+            </button>
+            <table style={styles.table}>
+              <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
+              <tbody>
+                {medicos.map(item => (
+                  <tr key={item.id}>
+                    <td style={styles.td}><div style={styles.medicoCell}><img src={item.imagem} alt={item.nome} style={styles.tdImage} />{item.nome}</div></td> 
+                    <td style={styles.td}>{item.especialidade}</td>
+                    <td style={styles.td}>
+                      <div style={styles.actionsCell}> 
+                        {/* CHAMA handleEdit (que chama handleEditMedico se for 'Médicos') */}
+                        <button 
+                            style={styles.btnIcon} 
+                            onClick={() => handleEdit(item.id, 'Médicos')}
+                        >
+                            ✏️ Editar
+                        </button>
+                        
+                        {/* CHAMA handleDeleteMedico (a função do Firestore) */}
+                        <button 
+                            style={{...styles.btnIcon, color: '#e57373'}} 
+                            onClick={() => handleDeleteMedico(item.id, item.nome)}
+                        >
+                            🗑️ Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
 
       case "Agendamentos":
         return (
@@ -621,22 +704,40 @@ if (!user) {
       )}
       
       {/* --- MODAL DE NOVO MÉDICO --- */}
-      {showModalMedico && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={styles.cardTitle}>Cadastrar Novo Médico</h3>
-            {/* ... Conteúdo do formulário Médico ... */}
+{showModalMedico && (
+    <div style={styles.modalOverlay}>
+        <div style={styles.modalContent}>
+            {/* O Título agora é dinâmico, baseado se medicoEmEdicao existe */}
+            <h3 style={styles.cardTitle}>{medicoEmEdicao ? 'Editar Médico' : 'Cadastrar Novo Médico'}</h3> 
+            
+            {/* ... Conteúdo do formulário Médico (mantido) ... */}
             <div style={styles.formGroup}><label style={styles.label}>Nome Completo:</label><input type="text" name="nome" value={formMedico.nome} onChange={handleInputChangeMedico} style={styles.input} /></div>
             <div style={styles.formGroup}><label style={styles.label}>Especialidade:</label><input type="text" name="especialidade" value={formMedico.especialidade} onChange={handleInputChangeMedico} style={styles.input} placeholder="Ex: Cardiologia, Pediatria"/></div>
             <div style={styles.formGroup}><label style={styles.label}>Horário de Trabalho:</label><input type="text" name="horario" value={formMedico.horario} onChange={handleInputChangeMedico} style={styles.input} placeholder="Ex: 08:00-17:00"/></div>
             <div style={styles.formGroup}><label style={styles.label}>URL da Imagem (Opcional):</label><input type="text" name="imagem" value={formMedico.imagem} onChange={handleInputChangeMedico} style={styles.input} placeholder="URL de uma foto do médico"/></div>
+            
             <div style={styles.modalActions}>
-              <button style={styles.btnPrimary} onClick={handleSaveMedico}>Salvar Médico</button>
-              <button style={styles.btnSecondary} onClick={() => setShowModalMedico(false)}>Cancelar</button>
+                {/* O onClick agora chama a função que SALVA OU ATUALIZA */}
+                <button style={styles.btnPrimary} onClick={handleSaveOrUpdateMedico}>
+                    {/* O texto do botão também é dinâmico */}
+                    {medicoEmEdicao ? 'Atualizar Médico' : 'Salvar Médico'}
+                </button>
+                
+                {/* Função de Cancelar/Fechar: Limpa o formulário e o estado de edição */}
+                <button 
+                    style={styles.btnSecondary} 
+                    onClick={() => {
+                        setShowModalMedico(false);
+                        setMedicoEmEdicao(null); // <--- LIMPA O ESTADO DE EDIÇÃO
+                        setFormMedico({ nome: "", especialidade: "", horario: "", imagem: "" }); // <--- LIMPA O FORM
+                    }}
+                >
+                    Cancelar
+                </button>
             </div>
-          </div>
         </div>
-      )}
+    </div>
+)}
 
 
       {/* MODAL DE NOVO FUNCIONÁRIO */}
