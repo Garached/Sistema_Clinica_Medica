@@ -373,15 +373,30 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
   const handleSaveAgendamento = async () => {
     const { medicoId, pacienteId, data, hora } = formAgendamento;
 
-    // Verificação de campos obrigatórios
     if (!medicoId || !pacienteId || !data || !hora) {
       alert("Preencha todos os campos obrigatórios.");
       return;
     }
 
+    const medico = medicos.find(m => m.id === medicoId);
+    if (!medico) {
+      alert("Médico inválido.");
+      return;
+    }
+
+    const [horaInicio, horaFim] = medico.horario.split(" - ").map(h => {
+      const [hStr, mStr] = h.split(":");
+      return { h: Number(hStr), m: Number(mStr) };
+    });
+
     const [horaInt, minutoInt] = hora.split(":").map(Number);
-    if (horaInt < 6 || (horaInt === 20 && minutoInt > 0) || horaInt > 20) {
-      alert("O horário deve estar entre 06:00 e 20:00.");
+
+    const horaTotal = horaInt * 60 + minutoInt;
+    const inicioTotal = horaInicio.h * 60 + horaInicio.m;
+    const fimTotal = horaFim.h * 60 + horaFim.m;
+
+    if (horaTotal < inicioTotal || horaTotal > fimTotal) {
+      alert(`O horário deve estar dentro do expediente do médico: ${medico.horario}`);
       return;
     }
 
@@ -396,7 +411,6 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       });
 
       alert("Consulta agendada com sucesso!");
-
       setFormAgendamento({
         medicoId: "",
         pacienteId: "",
@@ -411,6 +425,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       alert("Erro ao agendar. Verifique o console (F12).");
     }
   };
+
 
 
 
@@ -1135,7 +1150,9 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
                   style={styles.input}
                 />
                 <small style={{ fontSize: 12, color: '#666' }}>
-                  Horário disponível: 06:00 AM às 08:00 PM
+                  Horário disponível: {formAgendamento.medicoId 
+                    ? medicos.find(m => m.id === formAgendamento.medicoId)?.horario 
+                    : "?"}
                 </small>
               </div>
 
