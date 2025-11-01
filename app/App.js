@@ -23,10 +23,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 
     const [activePage, setActivePage] = useState('Dashboard');
     const [pacientes, setPacientes] = useState([]);
-    const [agendamentos, setAgendamentos] = useState([
-      { id: 1, hora: "08:30", paciente: "João Silva", medico: "Dr. Pedro", especialidade: "Cardiologia", status: "confirmado" },
-      { id: 2, hora: "09:00", paciente: "Maria Souza", medico: "Dra. Ana", especialidade: "Pediatria", status: "aguardando" },
-    ]);
+    const [agendamentos, setAgendamentos] = useState([]);
     const [medicos, setMedicos] = useState([]);
     const [vacinas, setVacinas] = useState([]);
     const [funcionarios, setFuncionarios] = useState([]);
@@ -198,6 +195,26 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 
       return () => unsubscribe();
     }, []);
+
+    // USE EFFECT PARA CARREGAR AGENDAMENTOS
+    useEffect(() => {
+      const q = query(agendamentosCollection, orderBy("data", "asc"), orderBy("hora", "asc"));
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const agendamentosData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setAgendamentos(agendamentosData);
+
+      }, (error) => {
+        console.error("Erro ao carregar agendamentos: ", error);
+      });
+
+      return () => unsubscribe();
+    }, []);
+
 
     // USE EFFECT PARA AGRUPAR VACINAS POR PACIENTE
     useEffect(() => {
@@ -622,32 +639,77 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
           );
 
         case "Agendamentos":
+          const hojeStr = new Date().toISOString().slice(0, 10);
+
+          const agendamentosCompletos = agendamentos.map(a => ({
+            ...a,
+            medico: medicos.find(m => m.id === a.medicoId) || { nome: "Médico", especialidade: "Especialidade" },
+            paciente: pacientes.find(p => p.id === a.pacienteId) || { nome: "Paciente" },
+          }));
+
+          const agendamentosHoje = agendamentosCompletos.filter(a => a.data === hojeStr);
+          const agendamentosFuturos = agendamentosCompletos.filter(a => a.data > hojeStr);
+
           return (
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Agendamentos</h3>
 
-              {/* NOVO BOTÃO */}
               <button style={styles.btnPrimary} onClick={() => setShowModalAgendamento(true)}>
                 + Agendar Consulta
               </button>
 
-              <ul style={{padding: 0, listStyle: 'none'}}>
-                {agendamentos.map((a) => (
-                  <li key={a.id} style={{...styles.agendaItem, borderLeftColor: a.status === 'confirmado' ? '#4caf50' : '#ffc107'}}>
-                    <div style={styles.agendaTime}>{a.hora}</div> 
-                    <div style={styles.agendaInfo}> 
-                      <strong>Consulta - {a.medico}</strong>
-                      <div style={{fontSize: '0.9em', color: '#666'}}>Paciente: {a.paciente}</div> 
-                    </div>
-                    <div style={styles.agendaActions}> 
-                      <button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>✏️ Editar</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {/* --- CONSULTAS DE HOJE --- */}
+              <h4 style={{ marginTop: 20 }}>Consultas de Hoje</h4>
+              {agendamentosHoje.length === 0 ? (
+                <p>Nenhuma consulta agendada para hoje.</p>
+              ) : (
+                <ul style={{ padding: 0, listStyle: 'none' }}>
+                  {agendamentosHoje.map((a) => (
+                    <li key={a.id} style={styles.agendaItem}>
+                      <div style={styles.agendaTime}>{a.hora}</div>
+                      <div style={styles.agendaInfo}>
+                        <strong>
+                          Consulta - {a.medico.nome} ({a.medico.especialidade})
+                        </strong>
+                        <div style={{ fontSize: '0.9em', color: '#666' }}>
+                          Paciente: {a.paciente.nome}
+                        </div>
+                      </div>
+                      <div style={styles.agendaActions}>
+                        <button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>✏️ Editar</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* --- CONSULTAS FUTURAS --- */}
+              <h4 style={{ marginTop: 20 }}>Consultas Futuras</h4>
+              {agendamentosFuturos.length === 0 ? (
+                <p>Nenhuma consulta futura.</p>
+              ) : (
+                <ul style={{ padding: 0, listStyle: 'none' }}>
+                  {agendamentosFuturos.map((a) => (
+                    <li key={a.id} style={styles.agendaItem}>
+                      <div style={styles.agendaTime}>{a.hora}</div>
+                      <div style={styles.agendaInfo}>
+                        <strong>
+                          Consulta - {a.medico.nome} ({a.medico.especialidade})
+                        </strong>
+                        <div style={{ fontSize: '0.9em', color: '#666' }}>
+                          Paciente: {a.paciente.nome}
+                        </div>
+                      </div>
+                      <div style={styles.agendaActions}>
+                        <div style={{ fontSize: '0.8em', color: '#888' }}>{a.data}</div>
+                        <button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>✏️ Editar</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           );
-
 
         case "Especialidades":
           return (
