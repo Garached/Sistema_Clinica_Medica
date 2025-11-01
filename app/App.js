@@ -28,7 +28,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
     const [vacinas, setVacinas] = useState([]);
     const [funcionarios, setFuncionarios] = useState([]);
     const [carteirinhaAgrupada, setCarteirinhaAgrupada] = useState([]);
-    
+    const [agendamentoEmEdicao, setAgendamentoEmEdicao] = useState(null);
     
     const [especialidades, setEspecialidades] = useState([]);
 
@@ -384,33 +384,50 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       return;
     }
 
+    // Validação de horário
     const [horaInicio, horaFim] = medico.horario.split(" - ").map(h => {
       const [hStr, mStr] = h.split(":");
       return { h: Number(hStr), m: Number(mStr) };
     });
-
     const [horaInt, minutoInt] = hora.split(":").map(Number);
-
     const horaTotal = horaInt * 60 + minutoInt;
     const inicioTotal = horaInicio.h * 60 + horaInicio.m;
     const fimTotal = horaFim.h * 60 + horaFim.m;
-
     if (horaTotal < inicioTotal || horaTotal > fimTotal) {
       alert(`O horário deve estar dentro do expediente do médico: ${medico.horario}`);
       return;
     }
 
     try {
-      await addDoc(agendamentosCollection, {
-        medicoId,
-        pacienteId,
-        data,
-        hora,
-        dataRegistro: new Date().toISOString(),
-        status: "aguardando"
-      });
+      if (agendamentoEmEdicao) {
+        // === Atualiza agendamento existente ===
+        await updateDoc(doc(db, 'agendamentos', agendamentoEmEdicao.id), {
+          medicoId,
+          pacienteId,
+          data,
+          hora,
+          status: "aguardando"
+        });
+        alert("Agendamento atualizado com sucesso!");
+        setAgendamentos(prev =>
+          prev.map(a => a.id === agendamentoEmEdicao.id ? { ...a, medicoId, pacienteId, data, hora } : a)
+        );
+        setAgendamentoEmEdicao(null); // limpa o estado de edição
+      } else {
+        // === Cria novo agendamento ===
+        const docRef = await addDoc(agendamentosCollection, {
+          medicoId,
+          pacienteId,
+          data,
+          hora,
+          dataRegistro: new Date().toISOString(),
+          status: "aguardando"
+        });
+        alert("Consulta agendada com sucesso!");
+        setAgendamentos(prev => [...prev, { id: docRef.id, medicoId, pacienteId, data, hora }]);
+      }
 
-      alert("Consulta agendada com sucesso!");
+      // Limpa formulário e fecha modal
       setFormAgendamento({
         medicoId: "",
         pacienteId: "",
@@ -421,13 +438,38 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       setShowModalAgendamento(false);
 
     } catch (error) {
-      console.error("Erro ao agendar consulta:", error);
-      alert("Erro ao agendar. Verifique o console (F12).");
+      console.error("Erro ao salvar agendamento:", error);
+      alert("Erro ao salvar agendamento. Verifique o console (F12).");
     }
   };
 
 
+  // Função de editar agendamento
+  const handleEditAgendamento = (agendamento) => {
+    setAgendamentoEmEdicao(agendamento); // guarda o agendamento que será editado
+    setFormAgendamento({
+      medicoId: agendamento.medicoId,
+      pacienteId: agendamento.pacienteId,
+      data: agendamento.data,
+      hora: agendamento.hora,
+      especialidade: agendamento.medico?.especialidade || ""
+    });
+    setShowModalAgendamento(true); // abre o modal
+  };
 
+  // Função de deletar agendamento
+  const handleDeleteAgendamento = async (agendamentoId, pacienteNome) => {
+    if (window.confirm(`Tem certeza que deseja excluir a consulta de "${pacienteNome}"?`)) {
+      try {
+        await deleteDoc(doc(db, 'agendamentos', agendamentoId));
+        alert("Agendamento excluído com sucesso!");
+        setAgendamentos(prev => prev.filter(a => a.id !== agendamentoId));
+      } catch (error) {
+        console.error("Erro ao excluir agendamento:", error);
+        alert("Erro ao excluir agendamento. Verifique o console (F12).");
+      }
+    }
+  };
 
     // --- FUNÇÃO DE SALVAR FUNCIONÁRIOS ---
 
@@ -691,7 +733,8 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
                         </div>
                       </div>
                       <div style={styles.agendaActions}>
-                        <button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>✏️ Editar</button>
+                        <button style={styles.btnIcon} onClick={() => handleEditAgendamento(a)}>✏️ Editar</button>
+                        <button style={{ ...styles.btnIcon, color: '#e57373' }} onClick={() => handleDeleteAgendamento(a.id, a.paciente.nome)}>🗑️ Excluir</button>
                       </div>
                     </li>
                   ))}
@@ -717,7 +760,8 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
                       </div>
                       <div style={styles.agendaActions}>
                         <div style={{ fontSize: '0.8em', color: '#888' }}>{a.data}</div>
-                        <button style={styles.btnIcon} onClick={() => handleEdit(a.id, 'Agendamentos')}>✏️ Editar</button>
+                        <button style={styles.btnIcon} onClick={() => handleEditAgendamento(a)}>✏️ Editar</button>
+                        <button style={{ ...styles.btnIcon, color: '#e57373' }} onClick={() => handleDeleteAgendamento(a.id, a.paciente.nome)}>🗑️ Excluir</button>
                       </div>
                     </li>
                   ))}
