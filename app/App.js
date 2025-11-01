@@ -1,5 +1,5 @@
-import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
-import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, setDoc, collection} from 'firebase/firestore';
+import { signOut } from "firebase/auth";
+import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
   auth,
