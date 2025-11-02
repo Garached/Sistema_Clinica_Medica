@@ -369,7 +369,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
           const medicoRef = doc(db, 'medicos', medicoEmEdicao.id);
           await updateDoc(medicoRef, {
             ...dadosMedico,
-            dataAtualizacao: new Date().toISOString(),atualização
+            dataAtualizacao: new Date().toISOString(),
           });
           alert(`Médico(a) "${formMedico.nome}" atualizado(a) com sucesso!`);
         } else {
