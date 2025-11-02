@@ -58,8 +58,11 @@ Antes de tudo, **certifique-se de ter o [Node.js](https://nodejs.org/) instalado
    ```bash
    npm start
    ```
-   O sistema estará disponível em **http://localhost:3000**
-
+   O terminal irá informar um endereço web, exemplo:
+   ```bash
+   Web is waiting on http://localhost:8081
+   ```
+   Entre no site informado para acessar o programa.
 ---
 
 ## 📦 MVP — Entrega da Sprint 1
