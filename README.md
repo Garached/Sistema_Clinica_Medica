@@ -58,8 +58,19 @@ Antes de tudo, **certifique-se de ter o [Node.js](https://nodejs.org/) instalado
    ```bash
    npm start
    ```
-   O sistema estará disponível em **http://localhost:3000**
+   O terminal irá informar um endereço web, exemplo:
+   ```bash
+   Web is waiting on http://localhost:8081
+   ```
+   Entre no site informado para acessar o programa.
 
+4. **Fazer login:**
+   
+   Ao abrir o site, aparecerá uma tela de login. Para entrar nela, será necessário entrar com uma conta registrada no FirebaseAuth. Para testar, use a conta a seguir:
+
+   email: "admin@gmail.com", senha: "123456".
+
+   Você passará por esse login 2x.
 ---
 
 ## 📦 MVP — Entrega da Sprint 1
