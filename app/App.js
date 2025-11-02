@@ -1,19 +1,3 @@
-<<<<<<< HEAD
-import { signOut } from "firebase/auth";
-import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import {
-  auth,
-  db,
-  funcionariosCollection,
-  medicosCollection,
-  pacientesCollection,
-  vacinasCollection
-} from './firebaseConfig';
-import Login from "./index.jsx";
-// Importar o restante das coleções (Pacientes, Médicos, etc.) no seu firebaseConfig.js
-// é crucial para o código abaixo funcionar.
-=======
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
   import { addDoc, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, setDoc, collection} from 'firebase/firestore';
   import { useEffect, useState } from 'react';
@@ -29,7 +13,6 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
   import Login from "./index.jsx";
   // Importar o restante das coleções (Pacientes, Médicos, etc.) no seu firebaseConfig.js
   // é crucial para o código abaixo funcionar.
->>>>>>> 10932c7463ed1b862a04257d43f4998bad3c88e1
 
   function App() {
     const sair = () => {
@@ -46,13 +29,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
     const [funcionarios, setFuncionarios] = useState([]);
     const [carteirinhaAgrupada, setCarteirinhaAgrupada] = useState([]);
     const [agendamentoEmEdicao, setAgendamentoEmEdicao] = useState(null);
-    
     const [especialidades, setEspecialidades] = useState([]);
-
-    const dadosRelatorio = {
-      consultasPorMes: [{ mes: 'Setembro', total: 250 }, { mes: 'Outubro', total: 210 }],
-      faturamentoPorConvenio: [{ convenio: 'Unimed', valor: 'R$ 42.850' }, { convenio: 'Particular', valor: 'R$ 23.100' }],
-    };
 
     const [showModalPaciente, setShowModalPaciente] = useState(false);
     const [showModalAgendamento, setShowModalAgendamento] = useState(false);
@@ -65,6 +42,76 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
     const [vacinaEmEdicao, setVacinaEmEdicao] = useState(null);
     const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState(null);
 
+    // --- estado e helpers para a tela de Relatórios ---
+    const [mesAtual, setMesAtual] = useState(new Date().getMonth());
+    const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
+
+    const meses = [
+      "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+      "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+    ];
+
+    // Função para avançar/voltar mês (garante troca de ano quando necessário)
+    const mudarMes = (delta) => {
+      setMesAtual(prevMes => {
+        let novoMes = prevMes + delta;
+        let novoAno = anoAtual;
+        if (novoMes < 0) { novoMes = 11; novoAno = anoAtual - 1; }
+        if (novoMes > 11) { novoMes = 0; novoAno = anoAtual + 1; }
+        setAnoAtual(novoAno);
+        return novoMes;
+      });
+    };
+
+    // Filtra agendamentos do mês atual e enriquece com medico/paciente
+    const agendamentosMes = agendamentos
+      .filter(a => {
+        if (!a.data) return false;
+        // aceita strings em ISO 'YYYY-MM-DD' ou Date-like
+        const d = new Date(a.data);
+        if (isNaN(d)) return false;
+        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+      })
+      .map(a => ({
+        ...a,
+        medico: medicos.find(m => m.id === a.medicoId) || { especialidade: "Não definido", nome: "Médico" },
+        paciente: pacientes.find(p => p.id === a.pacienteId) || { convenio: "Particular", nome: "Paciente" },
+      }));
+
+    // Agrupa consultas por especialidade
+    const consultasPorEspecialidade = agendamentosMes.reduce((acc, a) => {
+      const esp = (a.medico && a.medico.especialidade) ? a.medico.especialidade : "Não definido";
+      acc[esp] = (acc[esp] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Agrupa consultas por convênio (para faturamento)
+    const consultasPorConvenio = agendamentosMes.reduce((acc, a) => {
+      const conv = (a.paciente && a.paciente.convenio) ? a.paciente.convenio : "Particular";
+      acc[conv] = (acc[conv] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Pacientes novos no mês: usa dataCadastro (corrigido)
+    const pacientesMes = pacientes.filter(p => {
+      const dataCad = p.dataCadastro || p.dataRegistro || p.createdAt || null;
+      if (!dataCad) return false;
+      const d = new Date(dataCad);
+      if (isNaN(d)) return false;
+      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    });
+
+    // Agrupa novos pacientes por convênio
+    const pacientesPorConvenio = pacientesMes.reduce((acc, p) => {
+      const conv = p.convenio || "Particular";
+      acc[conv] = (acc[conv] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Faturamento estimado
+    const valorConsulta = 50;
+    const faturamentoTotal = agendamentosMes.length * valorConsulta;
+
 
     const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', dataNasc: '', convenio: '' });
     const [formAgendamento, setFormAgendamento] = useState({medicoId: '',pacienteId: '',data: '',hora: '',especialidade: '',});
@@ -75,7 +122,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
     // Funções de manipulação e exclusão... (Mantidas as suas originais e as novas de Funcionário)
 
     const handleEdit = (id, tipo) => {
-      // alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`); // Linha original
+      // alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`); // Linha original
 
       if (tipo === 'Médicos') {
           // Encontra o objeto médico completo pelo ID
@@ -89,7 +136,7 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
           // Implementar lógica para outros tipos (Pacientes, Funcionários, etc.)
           alert(`Ação: EDITAR item ${id} da categoria ${tipo} (implementar)`);
       }
-    };
+    };
 
     const handleDelete = (id, tipo, setter) => {
       if (window.confirm(`Tem certeza que deseja excluir o item ${id} de ${tipo}?`)) {
@@ -469,21 +516,21 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 
   // SALVAR FUNCIONÁRIOS
   const handleSaveFuncionario = async () => {
-    try {
-      if (!formFuncionario.nome || !formFuncionario.email || !formFuncionario.senha) {
-        alert("Preencha todos os campos!");
-        return;
-      }
+    try {
+      if (!formFuncionario.nome || !formFuncionario.email || !formFuncionario.senha) {
+        alert("Preencha todos os campos!");
+        return;
+      }
 
-      if (formFuncionario.senha.length < 6) {
-        alert("A senha deve ter pelo menos 6 caracteres.");
-        return;
-      }
+      if (formFuncionario.senha.length < 6) {
+        alert("A senha deve ter pelo menos 6 caracteres.");
+        return;
+      }
 
-      if (!/\S+@\S+\.\S+/.test(formFuncionario.email)) {
-        alert("Por favor, insira um email válido.");
-        return;
-      }
+      if (!/\S+@\S+\.\S+/.test(formFuncionario.email)) {
+        alert("Por favor, insira um email válido.");
+        return;
+      }
       
       const dadosFuncionario = {
           nome: formFuncionario.nome,
@@ -492,28 +539,28 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       };
 
 
-      if (funcionarioEmEdicao) {
-        const ref = doc(db, "funcionarios", funcionarioEmEdicao.id);
-        await updateDoc(ref, {
+      if (funcionarioEmEdicao) {
+        const ref = doc(db, "funcionarios", funcionarioEmEdicao.id);
+        await updateDoc(ref, {
           ...dadosFuncionario,
           dataAtualizacao: new Date().toISOString(), 
         });
-        alert(`Funcionário "${formFuncionario.nome}" atualizado!`);
-      } else {
-        await addDoc(funcionariosCollection, { 
+        alert(`Funcionário "${formFuncionario.nome}" atualizado!`);
+      } else {
+        await addDoc(funcionariosCollection, { 
             ...dadosFuncionario,
             dataCadastro: new Date().toISOString(), 
         });
-        alert(`Funcionário "${formFuncionario.nome}" cadastrado!`);
-      }
+        alert(`Funcionário "${formFuncionario.nome}" cadastrado!`);
+      }
 
-      setShowModalFuncionario(false);
-      setFuncionarioEmEdicao(null);
-      setFormFuncionario({ nome: "", email: "", senha: "" });
-    } catch (error) {
-      console.error("Erro ao salvar funcionário:", error);
-      alert("Erro ao salvar funcionário. Veja o console.");
-    }
+      setShowModalFuncionario(false);
+      setFuncionarioEmEdicao(null);
+      setFormFuncionario({ nome: "", email: "", senha: "" });
+    } catch (error) {
+      console.error("Erro ao salvar funcionário:", error);
+      alert("Erro ao salvar funcionário. Veja o console.");
+    }
   };
 
     // EXCLUIR FUNCIONARIO
@@ -596,13 +643,38 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 
     // PAGINAS
     const renderPage = () => {
+      const hojeStr = new Date().toISOString().slice(0, 10);
+
+      const agendamentosCompletos = agendamentos.map(a => ({
+        ...a,
+        medico: medicos.find(m => m.id === a.medicoId) || { nome: "Médico", especialidade: "Especialidade" },
+        paciente: pacientes.find(p => p.id === a.pacienteId) || { nome: "Paciente" },
+      }));
+
+      const agendamentosHoje = agendamentosCompletos.filter(a => a.data === hojeStr);
+      const agendamentosFuturos = agendamentosCompletos.filter(a => a.data > hojeStr);
+
       switch (activePage) {
         case "Dashboard":
           return (
             <section style={styles.dashboardGrid}>
-              <div style={styles.card}><h3 style={styles.cardTitle}>Agendamentos hoje</h3><div style={styles.kpi}>{agendamentos.length}</div><small>Confirmados: {agendamentos.filter(a=>a.status === 'confirmado').length} / Aguardando: {agendamentos.filter(a=>a.status === 'aguardando').length}</small></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>Pacientes</h3><div style={styles.kpi}>{pacientes.length}</div><small>Total cadastrado</small></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>Receita (mês)</h3><div style={styles.kpi}>R$ 68.340</div><small>Exemplo</small></div>
+              <div style={styles.card}>
+                <h3 style={styles.cardTitle}>Agendamentos Hoje</h3>
+                <div style={styles.kpi}>{agendamentosHoje.length}</div>
+                <small>Consultas futuras: {agendamentosFuturos.length}</small>
+              </div>
+
+              <div style={styles.card}>
+                <h3 style={styles.cardTitle}>Pacientes</h3>
+                <div style={styles.kpi}>{pacientes.length}</div>
+                <small>Total cadastrado</small>
+              </div>
+
+              <div style={styles.card}>
+                <h3 style={styles.cardTitle}>Receita (mês)</h3>
+                <div style={styles.kpi}>R$ 68.340</div>
+                <small>Exemplo</small>
+              </div>
             </section>
           );
 
@@ -633,10 +705,10 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
           );
 
         case "Médicos":
-          return (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Médicos</h3>
-              <button 
+          return (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Médicos</h3>
+              <button 
                   style={styles.btnPrimary} 
                   onClick={() => {
                       setMedicoEmEdicao(null); 
@@ -646,51 +718,40 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
               >
                   + Novo Médico
               </button>
-              <table style={styles.table}>
-                <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
-                <tbody>
-                  {medicos.map(item => (
-                    <tr key={item.id}>
-                      <td style={styles.td}><div style={styles.medicoCell}><img src={item.imagem} alt={item.nome} style={styles.tdImage} />{item.nome}</div></td> 
-                      <td style={styles.td}>{item.especialidade}</td>
-                      <td style={styles.td}>
-                        <div style={styles.actionsCell}> 
-                          {/* CHAMA handleEdit (que chama handleEditMedico se for 'Médicos') */}
-                          <button 
+              <table style={styles.table}>
+                <thead><tr><th style={styles.th}>Médico</th><th style={styles.th}>Especialidade</th><th style={styles.th}>Ações</th></tr></thead>
+                <tbody>
+                  {medicos.map(item => (
+                    <tr key={item.id}>
+                      <td style={styles.td}><div style={styles.medicoCell}><img src={item.imagem} alt={item.nome} style={styles.tdImage} />{item.nome}</div></td> 
+                      <td style={styles.td}>{item.especialidade}</td>
+                      <td style={styles.td}>
+                        <div style={styles.actionsCell}> 
+                          {/* CHAMA handleEdit (que chama handleEditMedico se for 'Médicos') */}
+                          <button 
                               style={styles.btnIcon} 
                               onClick={() => handleEdit(item.id, 'Médicos')}
                           >
                               ✏️ Editar
                           </button>
-                          
+                          
                           {/* CHAMA handleDeleteMedico (a função do Firestore) */}
-                          <button 
+                          <button 
                               style={{...styles.btnIcon, color: '#e57373'}} 
                               onClick={() => handleDeleteMedico(item.id, item.nome)}
                           >
                               🗑️ Excluir
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
+                        </div>
+                      </td>
+                      </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+         );
 
         case "Agendamentos":
-          const hojeStr = new Date().toISOString().slice(0, 10);
-
-          const agendamentosCompletos = agendamentos.map(a => ({
-            ...a,
-            medico: medicos.find(m => m.id === a.medicoId) || { nome: "Médico", especialidade: "Especialidade" },
-            paciente: pacientes.find(p => p.id === a.pacienteId) || { nome: "Paciente" },
-          }));
-
-          const agendamentosHoje = agendamentosCompletos.filter(a => a.data === hojeStr);
-          const agendamentosFuturos = agendamentosCompletos.filter(a => a.data > hojeStr);
-
           return (
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Agendamentos</h3>
@@ -838,27 +899,74 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
           );
 
         case "Relatórios":
-          return (
-            <section>
-              <div style={styles.card}><h3 style={styles.cardTitle}>Relatórios Gerenciais</h3></div>
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px'}}> 
-                <div style={styles.card}>
-                  <h4 style={styles.cardTitle}>Consultas por Mês</h4>
-                  <table style={styles.table}>
-                    <thead><tr><th style={styles.th}>Mês</th><th style={styles.th}>Total</th></tr></thead>
-                    <tbody>{dadosRelatorio.consultasPorMes.map((item, i) => (<tr key={i}><td style={styles.td}>{item.mes}</td><td style={styles.td}>{item.total}</td></tr>))}</tbody>
-                  </table>
-                </div>
-                <div style={styles.card}>
-                  <h4 style={styles.cardTitle}>Faturamento por Convênio</h4>
-                  <table style={styles.table}>
-                    <thead><tr><th style={styles.th}>Convênio</th><th style={styles.th}>Valor</th></tr></thead>
-                    <tbody>{dadosRelatorio.faturamentoPorConvenio.map((item, i) => (<tr key={i}><td style={styles.td}>{item.convenio}</td><td style={styles.td}>{item.valor}</td></tr>))}</tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          );
+  return (
+    <section>
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>Relatórios Gerenciais</h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <button style={styles.btnIcon} onClick={() => mudarMes(-1)}>⬅️</button>
+          <h4 style={{ margin: 0 }}>{meses[mesAtual]} / {anoAtual}</h4>
+          <button style={styles.btnIcon} onClick={() => mudarMes(1)}>➡️</button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px", marginTop: 16 }}>
+
+        {/* CARD 1 - CONSULTAS */}
+        <div style={styles.card}>
+          <h4 style={styles.cardTitle}>Consultas no mês</h4>
+          <div style={styles.kpi}>{agendamentosMes.length}</div>
+          <small>Por especialidade:</small>
+          <ul style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
+            {Object.keys(consultasPorEspecialidade).length === 0 ? (
+              <li>Nenhuma consulta</li>
+            ) : (
+              Object.entries(consultasPorEspecialidade).map(([esp, qtd]) => (
+                <li key={esp}>{esp}: {qtd}</li>
+              ))
+            )}
+          </ul>
+        </div>
+
+        {/* CARD 2 - FATURAMENTO */}
+        <div style={styles.card}>
+          <h4 style={styles.cardTitle}>Rendimento Mensal Estimado</h4>
+          <div style={styles.kpi}>R$ {faturamentoTotal.toLocaleString()}</div>
+          <div style={{ marginTop: 8 }}>
+            <small>Por convênio:</small>
+            <ul style={{ listStyle: "none", padding: 0, marginTop: 6 }}>
+              {Object.keys(consultasPorConvenio).length === 0 ? (
+                <li>—</li>
+              ) : (
+                Object.entries(consultasPorConvenio).map(([conv, qtd]) => (
+                  <li key={conv}>{conv}: R$ {(qtd * valorConsulta).toLocaleString()}</li>
+                ))
+              )}
+            </ul>
+          </div>
+          <small style={{fontSize: 13, fontStyle: "italic"}}>Obs.: isso é apenas uma estimativa caso cada consulta rendesse R$50,00</small>
+        </div>
+
+        {/* CARD 3 - NOVOS PACIENTES */}
+        <div style={styles.card}>
+          <h4 style={styles.cardTitle}>Novos Pacientes</h4>
+          <div style={styles.kpi}>{pacientesMes.length}</div>
+          <small>Por convênio:</small>
+          <ul style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
+            {Object.keys(pacientesPorConvenio).length === 0 ? (
+              <li>Nenhum novo paciente</li>
+            ) : (
+              Object.entries(pacientesPorConvenio).map(([conv, qtd]) => (
+                <li key={conv}>{conv}: {qtd}</li>
+              ))
+            )}
+          </ul>
+        </div>
+
+      </div>
+    </section>
+  );
+
 
         case "Logout":
           return (sair());  
@@ -949,53 +1057,53 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 
         {/* MODAL DE NOVO FUNCIONÁRIO */}
         {showModalFuncionario && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={styles.cardTitle}>
-              {funcionarioEmEdicao ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
-            </h3>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Nome:</label>
-              <input
-                type="text"
-                name="nome"
-                value={formFuncionario.nome}
-                onChange={handleInputChangeFuncionario}
-                style={styles.input}
-              />
-            </div>
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={styles.cardTitle}>
+              {funcionarioEmEdicao ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
+            </h3>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Email:</label>
-              <input
-                type="email"
-                name="email"
-                value={formFuncionario.email}
-                onChange={handleInputChangeFuncionario}
-                style={styles.input}
-                placeholder="email@clinica.com"
-              />
-            </div>
+              <label style={styles.label}>Nome:</label>
+              <input
+                type="text"
+                name="nome"
+                value={formFuncionario.nome}
+                onChange={handleInputChangeFuncionario}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email:</label>
+              <input
+                type="email"
+                name="email"
+                value={formFuncionario.email}
+                onChange={handleInputChangeFuncionario}
+                style={styles.input}
+                placeholder="email@clinica.com"
+              />
+            </div>
             
             <div style={styles.formGroup}>
-              <label style={styles.label}>Senha:</label>
-              <input
-                type="password"
-                name="senha"
-                value={formFuncionario.senha}
-                onChange={handleInputChangeFuncionario}
-                style={styles.input}
-                placeholder={funcionarioEmEdicao ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"}
-              />
-            </div>
+              <label style={styles.label}>Senha:</label>
+              <input
+                type="password"
+                name="senha"
+                value={formFuncionario.senha}
+                onChange={handleInputChangeFuncionario}
+                style={styles.input}
+                placeholder={funcionarioEmEdicao ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"}
+              />
+            </div>
 
 
-            <div style={styles.modalActions}>
-              <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>
+            <div style={styles.modalActions}>
+              <button style={styles.btnPrimary} onClick={handleSaveFuncionario}>
                   {funcionarioEmEdicao ? "Atualizar Funcionário" : "Salvar Funcionário"}
               </button>
-              <button 
+              <button 
                   style={styles.btnSecondary} 
                   onClick={() => {
                       setShowModalFuncionario(false);
@@ -1005,18 +1113,18 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
               >
                   Cancelar
               </button>
-            </div>
-          </div>
-        </div>
-        )}
+            </div>
+          </div>
+        </div>
+        )}
 
 
         {/* --- MODAL DE NOVA VACINA --- */}
-        {showModalVacina && (
-          <div style={styles.modalOverlay}>
-            <div style={styles.modalContent}>
-              <h3 style={styles.cardTitle}>Adicionar Nova Vacina</h3>
-              <div style={styles.formGroup}>
+        {showModalVacina && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+              <h3 style={styles.cardTitle}>Adicionar Nova Vacina</h3>
+              <div style={styles.formGroup}>
                 <label style={styles.label}>Paciente:</label>
                 <select
                   name="pacienteId"
@@ -1032,21 +1140,21 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
                   ))}
                 </select>
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Data de Vacinação:</label>
-                <input type="date" name="dataVacina" value={formVacina.dataVacina} onChange={handleInputChangeVacina} style={styles.input} />
-              </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Vacina:</label>
-                <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
-              </div>
-              <div style={styles.modalActions}>
-                <button style={styles.btnPrimary} onClick={handleSaveVacina}>Confirmar Vacina</button>
-                <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
-              </div>
-            </div>
-          </div>
-        )}
+                <label style={styles.label}>Data de Vacinação:</label>
+                <input type="date" name="dataVacina" value={formVacina.dataVacina} onChange={handleInputChangeVacina} style={styles.input} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Vacina:</label>
+                <input type="text" name="vacina" value={formVacina.vacina} onChange={handleInputChangeVacina} style={styles.input} />
+              </div>
+              <div style={styles.modalActions}>
+                <button style={styles.btnPrimary} onClick={handleSaveVacina}>Confirmar Vacina</button>
+                <button style={{...styles.btnSecondary}} onClick={() => setShowModalVacina(false)}>Cancelar</button> 
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* --- MODAL CARTEIRINHA DE VACINAÇÃO --- */}
         {showModalDetalhesVacinas && pacienteEmDetalhe && (
@@ -1198,9 +1306,9 @@ import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
       );
     }
 const styles = {
-  app: { display: 'flex', fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', backgroundColor: '#f4f7f8', minHeight: '100vh' },
-  sidebar: { width: '240px', backgroundColor: '#eaf9f9', padding: '20px 10px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  logo: { fontSize: '24px', fontWeight: '700', color: '#2b9aa3' },
+  app: { display: 'flex', fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', backgroundColor: '#f4f7f8', minHeight: '100vh' },
+  sidebar: { width: '240px', backgroundColor: '#eaf9f9', padding: '20px 10px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', flexShrink: 0 },
+  logo: { fontSize: '24px', fontWeight: '700', color: '#2b9aa3' },
   navItem: {
     backgroundColor: 'transparent',
     border: 'none',
@@ -1211,75 +1319,75 @@ const styles = {
     cursor: 'pointer',
     fontSize: '15px',
     transition: 'background 0.3s',
-  },  
+  },
   navItemActive: {
     backgroundColor: '#b6e7ea', 
     fontWeight: 'bold',
     border: '1px solid #b6e7ea',
     borderRadius: '12px',
   },
-  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
-  topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
-  searchInput: { width: '350px', padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
-  content: { padding: '25px', flexGrow: 1, overflowY: 'auto' },
-  card: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '25px' },
-  cardTitle: { marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', color: '#333', fontSize: '1.2em', fontWeight: 600 },
-  kpi: { fontSize: '30px', fontWeight: '700', margin: '10px 0', color: '#2b9aa3' },
-  dashboardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px' },
+  main: { flexGrow: 1, display: 'flex', flexDirection: 'column' },
+  topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', flexShrink: 0 },
+  searchInput: { width: '350px', padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
+  content: { padding: '25px', flexGrow: 1, overflowY: 'auto' },
+  card: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '25px' },
+  cardTitle: { marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', color: '#333', fontSize: '1.2em', fontWeight: 600 },
+  kpi: { fontSize: '30px', fontWeight: '700', margin: '10px 0', color: '#2b9aa3' },
+  dashboardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px' },
 
-  table: { width: '100%', borderCollapse: 'collapse', marginTop: '15px' },
-  th: { padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0', fontSize: '13px', color: '#777', textTransform: 'uppercase', backgroundColor: '#f9f9f9' },
-  td: { padding: '14px 15px', borderBottom: '1px solid #e0e0e0', verticalAlign: 'middle', fontSize: '14px' },
-  tdImage: { width: '40px', height: '40px', borderRadius: '50%', marginRight: '12px', objectFit: 'cover' },
-  medicoCell: { display: 'flex', alignItems: 'center' },
-  actionsCell: { display: 'flex', alignItems: 'center', gap: '5px' },
+  table: { width: '100%', borderCollapse: 'collapse', marginTop: '15px' },
+  th: { padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0', fontSize: '13px', color: '#777', textTransform: 'uppercase', backgroundColor: '#f9f9f9' },
+  td: { padding: '14px 15px', borderBottom: '1px solid #e0e0e0', verticalAlign: 'middle', fontSize: '14px' },
+  tdImage: { width: '40px', height: '40px', borderRadius: '50%', marginRight: '12px', objectFit: 'cover' },
+  medicoCell: { display: 'flex', alignItems: 'center' },
+  actionsCell: { display: 'flex', alignItems: 'center', gap: '5px' },
 
-  btnPrimary: { padding: '10px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', backgroundColor: '#2b9aa3', color: 'white', fontSize: '14px' },
-  btnSecondary: { padding: '10px 18px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer', fontWeight: '600', backgroundColor: '#f0f0f0', color: '#333', fontSize: '14px' },
-  btnIcon: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px', color: '#555', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' },
+  btnPrimary: { padding: '10px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', backgroundColor: '#2b9aa3', color: 'white', fontSize: '14px' },
+  btnSecondary: { padding: '10px 18px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer', fontWeight: '600', backgroundColor: '#f0f0f0', color: '#333', fontSize: '14px' },
+  btnIcon: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px', color: '#555', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' },
 
-  agendaItem: { display: 'flex', alignItems: 'center', padding: '16px 10px', borderBottom: '1px solid #e0e0e0', borderLeftWidth: '5px', borderLeftStyle: 'solid', gap: '15px' },
-  agendaTime: { fontWeight: '600', width: '70px', textAlign: 'center', flexShrink: 0 },
-  agendaInfo: { flexGrow: 1 },
-  agendaActions: { flexShrink: 0 },
+  agendaItem: { display: 'flex', alignItems: 'center', padding: '16px 10px', borderBottom: '1px solid #e0e0e0', borderLeftWidth: '5px', borderLeftStyle: 'solid', gap: '15px' },
+  agendaTime: { fontWeight: '600', width: '70px', textAlign: 'center', flexShrink: 0 },
+  agendaInfo: { flexGrow: 1 },
+  agendaActions: { flexShrink: 0 },
 
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center', 
-    zIndex: 1000,
-    padding: '20px' 
-  },
-  modalContent: {
-    background: 'white',
-    padding: '25px 30px',
-    borderRadius: '12px',
-    width: '90%',
-    maxWidth: '500px',
-    boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
-    maxHeight: '90vh', 
-    overflowY: 'auto', 
-    display: 'flex', 
-    flexDirection: 'column' 
-  },
-  formGroup: { marginBottom: '18px' },
-  label: { display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#555' },
-  input: { width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box', fontSize: '14px' },
-  modalActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '25px',
-    borderTop: '1px solid #e0e0e0',
-    paddingTop: '20px',
-    flexShrink: 0 
-  }
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center', 
+    zIndex: 1000,
+    padding: '20px' 
+  },
+  modalContent: {
+    background: 'white',
+    padding: '25px 30px',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '500px',
+    boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    display: 'flex', 
+    flexDirection: 'column' 
+  },
+  formGroup: { marginBottom: '18px' },
+  label: { display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#555' },
+  input: { width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box', fontSize: '14px' },
+  modalActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '25px',
+    borderTop: '1px solid #e0e0e0',
+    paddingTop: '20px',
+    flexShrink: 0 
+  }
 };
 
 export default App;
