@@ -1,71 +1,139 @@
-# Projeto: Sistema de Clínica Médica
+# 🏥 Sistema de Clínica Médica
 
-Este projeto é um Sistema de Gerenciamento de Clínica Médica, desenvolvido como parte da disciplina de Engenharia de Software. O objetivo é centralizar as operações da clínica, como agendamentos e atendimento, tornando o processo mais ágil, eficiente e seguro .
+Este projeto é um **Sistema Interno de Gerenciamento de Clínica Médica**, desenvolvido como parte da disciplina de **Engenharia de Software**.  
+O sistema foi projetado para uso exclusivo dos funcionários administrativos da clínica (como recepcionistas e equipe de gestão), permitindo gerenciar pacientes, consultas, médicos e especialidades.  
 
-## 👥 Integrantes (Grupo 1) 
+Os médicos e pacientes são considerados usuários secundários, pois não acessam o sistema diretamente — seus dados são gerenciados internamente pelos funcionários.
 
-* Gabriela Abi Rached Dantas 
-* João Guilherme Faber 
-* Leonardo Bezzi Elias 
-* Murilo Brenneken Duarte Passarelli 
-* Murilo Gonçalves Nascimento 
-* Yasmin Marques Barros 
+---
+
+## 👥 Integrantes (Grupo 1)
+
+- Gabriela Abi Rached Dantas  
+- João Guilherme Faber  
+- Leonardo Bezzi Elias  
+- Murilo Brenneken Duarte Passarelli  
+- Murilo Gonçalves Nascimento  
+- Yasmin Marques Barros  
+
+---
 
 ## 🎯 Visão do Produto
 
-O software visa acolher a necessidade tanto dos doutores quanto dos pacientes de ter um meio fácil, simples e confiável para realizar suas necessidades, envolvendo nosso objetivo principal: o agendamento e o atendimento em uma clínica médica .
+O software tem como objetivo centralizar e automatizar as operações internas da clínica, tornando o processo de agendamento, cadastro e controle de informações médicas mais ágil, confiável e eficiente.  
 
-## 💻 Stack Definida
+Com ele, a equipe pode:
+- Cadastrar e editar pacientes e funcionários.  
+- Agendar e gerenciar consultas médicas.  
+- Visualizar relatórios mensais e estatísticas gerenciais.  
+- Organizar especialidades e carteirinhas de vacinação de forma digital.  
 
-* **Front-end:** React (com JavaScript)
-* **Back-end / Banco de Dados:** Firebase (utilizando Firestore e Firebase Authentication)
+---
+
+## 💻 Stack Utilizada
+
+- **Front-end:** React (JavaScript)  
+- **Back-end / Banco de Dados:** Firebase  
+  - Firestore (banco de dados em nuvem)  
+  - Firebase Authentication (controle de acesso por e-mail/senha)  
+
+---
 
 ## 🚀 Como Executar Localmente
 
-Siga os passos abaixo para configurar e executar o projeto em seu ambiente local:
+Antes de tudo, **certifique-se de ter o [Node.js](https://nodejs.org/) instalado** em seu computador.
 
-1.  **Clonar o repositório:**
-    ```bash
-    git clone https://github.com/Garached/Sistema_Clinica_Medica.git
-    cd Sistema_Clinica_Medica
-    ```
+1. **Clonar o repositório:**
+   ```bash
+   git clone https://github.com/Garached/Sistema_Clinica_Medica.git
+   cd Sistema_Clinica_Medica
+   ```
 
-2.  **Instalar dependências (Front-end):**
-    ```bash
-    npm install
-    ```
+2. **Instalar as dependências do projeto:**
+   ```bash
+   npm install
+   ```
 
-3.  **Configurar Variáveis de Ambiente (.env):**
-    * Crie um arquivo `.env` na raiz do projeto.
-    * Adicione as chaves de configuração do seu projeto Firebase. Você pode encontrá-las no console do Firebase em "Configurações do projeto".
+3. **Iniciar o projeto:**
+   ```bash
+   npm start
+   ```
+   O sistema estará disponível em **http://localhost:3000**
 
-    ```
-    REACT_APP_FIREBASE_API_KEY="SUA_API_KEY"
-    REACT_APP_FIREBASE_AUTH_DOMAIN="SEU_AUTH_DOMAIN"
-    REACT_APP_FIREBASE_PROJECT_ID="SEU_PROJECT_ID"
-    REACT_APP_FIREBASE_STORAGE_BUCKET="SEU_STORAGE_BUCKET"
-    REACT_APP_FIREBASE_MESSAGING_SENDER_ID="SEU_SENDER_ID"
-    REACT_APP_FIREBASE_APP_ID="SEU_APP_ID"
-    ```
+---
 
-4.  **Configuração do Firebase (Banco de Dados):**
-    * Certifique-se de que o **Firestore** e o **Firebase Authentication** (com provedor de E-mail/Senha) estão ativados no console do Firebase.
-    * Para que o fluxo de agendamento funcione, pode ser necessário adicionar manualmente algumas "especialidades" e "funcionários" (médicos) no seu banco Firestore, conforme os requisitos RF05 e RF06.
+## 📦 MVP — Entrega da Sprint 1
 
-5.  **Iniciar o projeto:**
-    ```bash
-    npm start
-    ```
-    O aplicativo estará disponível em `http://localhost:3000`.
+A **Sprint 1** teve como objetivo implementar o núcleo funcional do sistema, garantindo o fluxo completo de cadastro de pacientes, funcionários, médicos, consultas e especialidades, além de uma interface de relatórios e carteirinha digital.  
 
-## 📦 MVP Mínimo Visível (Entrega Sprint 1)
+### 🔹 **RF01 – Gerenciar Pacientes**
+- Cadastro, edição e exclusão de pacientes.  
+- Validação de campos obrigatórios (nome completo, CPF, data de nascimento, convênio etc.).  
+- Listagem de todos os pacientes com suas informações principais.  
+- Ligação com o módulo de agendamento (para relacionar consultas ao paciente).  
 
-Para esta entrega inicial, focamos no fluxo de **Cadastro de Pacientes (RF01)** , que é uma entidade central do sistema e atende à história de usuário de alta prioridade da recepcionista ("Como recepcionista, quero cadastrar pacientes...") .
+### 🔹 **RF02 – Gerenciar Consultas**
+- Agendamento de novas consultas, com seleção de médico e paciente.  
+- Edição e cancelamento de consultas já criadas.  
+- Divisão visual entre **consultas do dia** e **consultas futuras**.  
+- Notificações automáticas internas (atualização dinâmica em tempo real no painel).  
 
-**Funcionalidade Implementada:**
-* Uma tela de formulário permite o cadastro de um novo paciente.
-* Os dados são salvos na coleção `pacientes` no banco de dados Firestore.
-* Foram implementadas validações de campos obrigatórios, como Nome completo , CPF (único) , Data de nascimento e Telefone de contato .
+### 🔹 **RF05 – Gerenciar Especialidades Médicas**
+- Listagem de especialidades cadastradas (ex: Cardiologia, Ortopedia).  
+- Associação automática de médicos a cada especialidade.  
+- Interface simples e acessível para consulta das áreas médicas disponíveis.  
 
-### 📸 Prints da Tela
+### 🔹 **RF06 – Gerenciar Funcionários**
+- Cadastro e edição de funcionários administrativos (com nome, e-mail e data de cadastro).  
+- Controle de permissões de acesso via **Firebase Authentication**.  
+- Remoção de funcionários inativos.
+
+### 🔹 **RF21 – Dashboard e Relatórios Gerenciais**
+- Painel principal com indicadores do dia:  
+  - Total de consultas agendadas para hoje.  
+  - Número de pacientes cadastrados.  
+  - Receita mensal estimada.  
+- Tela de relatórios por **mês/ano**, com:
+  - Consultas realizadas (por especialidade).  
+  - Rendimento mensal estimado.  
+  - Novos pacientes cadastrados no mês.  
+
+### 🔹 **Carteirinha de Vacinação Digital (Funcionalidade Inovadora)**
+- Agrupamento das vacinas por paciente em uma única tela.  
+- Cadastro de novas vacinas associadas ao paciente.  
+- Visualização rápida da quantidade de vacinas por pessoa.  
+- Objetivo: digitalizar e unificar carteirinhas físicas em um sistema único.  
+
+---
+
+## 🧭 Estrutura do Sistema
+
+O sistema é dividido nas seguintes páginas principais:
+
+| Página | Descrição |
+|--------|------------|
+| **Dashboard** | Visão geral da clínica, com KPIs de consultas, pacientes e receita. |
+| **Pacientes** | Gerenciamento completo de cadastros de pacientes. |
+| **Médicos** | Controle de médicos e suas especialidades. |
+| **Agendamentos** | Criação, edição e cancelamento de consultas. |
+| **Especialidades** | Lista das especialidades e quantidade de médicos em cada uma. |
+| **Carteirinha** | Controle de vacinas dos pacientes. |
+| **Funcionários** | Administração dos usuários internos do sistema. |
+| **Relatórios** | Painel gerencial com estatísticas mensais e comparativos. |
+
+---
+
+## 🧩 Observações Finais
+
+O sistema foi desenvolvido com foco em usabilidade e simplicidade, mantendo a interface intuitiva para uso cotidiano da equipe da clínica.  
+Com o avanço das próximas sprints, serão incluídas novas funcionalidades como:
+- Exportação de relatórios em PDF.  
+- Envio de lembretes automáticos de consulta por e-mail ou WhatsApp.  
+- Dashboards comparativos entre meses.
+
+---
+
+📅 **Versão:** Sprint 1  
+📍 **Status:** MVP funcional entregue  
+🧠 **Disciplina:** Engenharia de Software — 2025
 
